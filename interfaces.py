@@ -25,7 +25,7 @@ class DeepLearningClass(ABC):
 class ImageSegmenter(DeepLearningClass):
 
     @abstractmethod
-    def segment(image2D, resolution):
+    def segment(self, image2D, resolution):
         """
         Perform the segmentation of the image
 
@@ -47,7 +47,7 @@ class ImageSegmenter(DeepLearningClass):
 class ImageClassifier(DeepLearningClass):
     
     @abstractmethod
-    def getClassification(image2D, resolution) -> str:
+    def getClassification(self, image2D, resolution) -> str:
         """
         Perform the classification
         
@@ -66,7 +66,8 @@ class ImageClassifier(DeepLearningClass):
         """
         pass
     
-    def getSegmenter(label: str) -> ImageSegmenter:
+    @abstractmethod
+    def getSegmenter(self, label: str) -> ImageSegmenter:
         """
         Get a proper classifier instance for this 
 
