@@ -5,14 +5,19 @@ Created on Thu Oct 15 19:25:52 2020
 
 @author: francesco
 """
+from __future__ import annotations
 from abc import ABC, abstractmethod
+
+
+class IncompatibleModelError(Exception):
+    pass
 
 class DeepLearningClass(ABC):   
     
     @abstractmethod
-    def loadModel(self):
+    def initModel(self):
         """
-        Load the model when needed
+        Initializes the model when needed
 
         Returns
         -------
@@ -21,36 +26,75 @@ class DeepLearningClass(ABC):
         """
         pass
     
-
-class ImageSegmenter(DeepLearningClass):
-
     @abstractmethod
-    def segment(self, image2D, resolution):
+    def calcDelta(self, baseModel: DeepLearningClass) -> DeepLearningClass:
         """
-        Perform the segmentation of the image
+        Calculate a delta with another model, Returns a new instance
 
         Parameters
         ----------
-        image2D : Two-dimensional image
-            Must be convertible to a numpy array
-        resolution : sequence (tuple or array)
-            Voxel size of the image for resampling
+        baseModel : DeepLearningClass
+            Base model to calculate the delta from
 
         Returns
         -------
-        dict[str, mask]
-            Contains the labels and the corresponding 2D masks
+        DeepLearningClass
+            A deep learning class representing the delta of the two models
 
         """
         pass
-
-class ImageClassifier(DeepLearningClass):
+    
+    def __sub__(self, rhs):
+        return self.calcDelta(rhs)
     
     @abstractmethod
-    def getClassification(self, image2D, resolution) -> str:
+    def applyDelta(self, deltaModel: DeepLearningClass) -> DeepLearningClass:
         """
-        Perform the classification
+        Applies a delta to this class and returns a new model with the delta applied
         
+
+        Parameters
+        ----------
+        deltaModel : DeepLearningClass
+            Applies a delta to the current model
+
+        Returns
+        -------
+        DeepLearningClass
+            The model that is the current model plus the delta
+
+        """
+        pass
+    
+    def __add__(self, rhs):
+        return self.applyDelta(rhs)
+    
+    @abstractmethod
+    def incrementalLearn(self, trainingData, trainingOutputs):
+        """
+        Perform an incremental learning step on the given training data/outputs
+
+        Parameters
+        ----------
+        trainingData : TYPE
+            Training data.
+        trainingOutputs : TYPE
+            Training outputs.
+
+        Returns
+        -------
+        None.
+
+        """
+        pass
+
+class Image2DDeepLearning(DeepLearningClass):
+
+    @abstractmethod
+    def apply(self, image2D, resolution):
+        """
+        Applies the deep learning model to the image
+
         Parameters
         ----------
         image2D : Two-dimensional image
@@ -60,26 +104,31 @@ class ImageClassifier(DeepLearningClass):
 
         Returns
         -------
-        str
-            Label of the classified object.
+        Depends on the operation performed:
+            For classifiers: str - Containing the label of the image
+            For segmenters: dict[str, mask] - Containing the labels and the corresponding 2D masks
 
         """
         pass
+
+class ModelProvider(ABC):
+    """
+        Abstract class that is the base for loading (and, in the future, storing?) models.
+        Has to be subclassed to support local and remote loading.
+    """
     
     @abstractmethod
-    def getSegmenter(self, label: str) -> ImageSegmenter:
+    def loadModel(self, modelName: str) -> DeepLearningClass:
         """
-        Get a proper classifier instance for this 
 
         Parameters
         ----------
-        label : str
-            A classification label as returned by self.getClassification()
+        modelName : str
+            The name of the model to load.
 
         Returns
         -------
-        ImageSegmenter
-            An instance of an appropriate segmenter for this classification
+        The weights of the model.
 
         """
         pass
