@@ -15,7 +15,7 @@ class IncompatibleModelError(Exception):
 class DeepLearningClass(ABC):   
     
     @abstractmethod
-    def initModel(self):
+    def init_model(self):
         """
         Initializes the model when needed
 
@@ -27,7 +27,7 @@ class DeepLearningClass(ABC):
         pass
     
     @abstractmethod
-    def calcDelta(self, baseModel: DeepLearningClass) -> DeepLearningClass:
+    def calc_delta(self, baseModel: DeepLearningClass) -> DeepLearningClass:
         """
         Calculate a delta with another model, Returns a new instance
 
@@ -45,17 +45,17 @@ class DeepLearningClass(ABC):
         pass
     
     def __sub__(self, rhs):
-        return self.calcDelta(rhs)
+        return self.calc_delta(rhs)
     
     @abstractmethod
-    def applyDelta(self, deltaModel: DeepLearningClass) -> DeepLearningClass:
+    def apply_delta(self, delta_model: DeepLearningClass) -> DeepLearningClass:
         """
         Applies a delta to this class and returns a new model with the delta applied
         
 
         Parameters
         ----------
-        deltaModel : DeepLearningClass
+        delta_model : DeepLearningClass
             Applies a delta to the current model
 
         Returns
@@ -67,18 +67,18 @@ class DeepLearningClass(ABC):
         pass
     
     def __add__(self, rhs):
-        return self.applyDelta(rhs)
+        return self.apply_delta(rhs)
     
     @abstractmethod
-    def incrementalLearn(self, trainingData, trainingOutputs):
+    def incremental_learn(self, training_data, training_outputs):
         """
         Perform an incremental learning step on the given training data/outputs
 
         Parameters
         ----------
-        trainingData : TYPE
+        training_data : TYPE
             Training data.
-        trainingOutputs : TYPE
+        training_outputs : TYPE
             Training outputs.
 
         Returns
@@ -117,12 +117,12 @@ class ModelProvider(ABC):
     """
     
     @abstractmethod
-    def loadModel(self, modelName: str) -> DeepLearningClass:
+    def load_model(self, model_name: str) -> DeepLearningClass:
         """
 
         Parameters
         ----------
-        modelName : str
+        model_name : str
             The name of the model to load.
 
         Returns

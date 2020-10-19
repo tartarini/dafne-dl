@@ -12,60 +12,60 @@ from .interfaces import IncompatibleModelError, DeepLearningClass
 import dill
 from io import BytesIO
 
-def defaultKerasWeightsToModelFunction(modelObj: DynamicDLModel, weights):
+def default_keras_weights_to_model_function(modelObj: DynamicDLModel, weights):
     modelObj.model.set_weights(weights)
     
-def defaultKerasModelToWeightsFunction(modelObj: DynamicDLModel):
+def default_keras_model_to_weights_function(modelObj: DynamicDLModel):
     return modelObj.model.get_weights()
 
-def defaultKerasDeltaFunction(lhs: DynamicDLModel, rhs: DynamicDLModel):
-    if lhs.modelID != rhs.modelID: raise IncompatibleModelError
-    lhs_weights = lhs.getWeights()
-    rhs_weights = rhs.getWeights()
+def default_keras_delta_function(lhs: DynamicDLModel, rhs: DynamicDLModel):
+    if lhs.model_id != rhs.model_id: raise IncompatibleModelError
+    lhs_weights = lhs.get_weights()
+    rhs_weights = rhs.get_weights()
     newWeights = []
     for depth in range(len(lhs_weights)):
         newWeights.append(lhs_weights[depth] - rhs_weights[depth])
-    outputObj = lhs.getEmptyCopy()
-    outputObj.setWeights(newWeights)
+    outputObj = lhs.get_empty_copy()
+    outputObj.set_weights(newWeights)
     return outputObj
 
-def defaultKerasApplyDeltaFunction(lhs: DynamicDLModel, rhs: DynamicDLModel):
-    if lhs.modelID != rhs.modelID: raise IncompatibleModelError
-    lhs_weights = lhs.getWeights()
-    rhs_weights = rhs.getWeights()
+def default_keras_apply_delta_function(lhs: DynamicDLModel, rhs: DynamicDLModel):
+    if lhs.model_id != rhs.model_id: raise IncompatibleModelError
+    lhs_weights = lhs.get_weights()
+    rhs_weights = rhs.get_weights()
     newWeights = []
     for depth in range(len(lhs_weights)):
         newWeights.append(lhs_weights[depth] + rhs_weights[depth])
-    outputObj = lhs.getEmptyCopy()
-    outputObj.setWeights(newWeights)
+    outputObj = lhs.get_empty_copy()
+    outputObj.set_weights(newWeights)
     return outputObj
 
 class DynamicDLModel(DeepLearningClass):
     """
     Class to represent a deep learning model that can be serialized/deserialized
     """
-    def __init__(self, modelID, # a unique ID to avoid mixing different models
-                 initModelFunction, # inits the model. Accepts no parameters and returns the model
-                 applyModelFunction, # function that applies the model. Has the object, and image, and a sequence containing resolutions as parameters
-                 weightsToModelFunction = defaultKerasWeightsToModelFunction, # put model weights inside the model.
-                 modelToWeightsFunction = defaultKerasModelToWeightsFunction, # get the weights from the model in a pickable format
-                 calcDeltaFunction = defaultKerasDeltaFunction, # calculate the weight delta
-                 applyDeltaFunction = defaultKerasApplyDeltaFunction, # apply a weight delta
-                 incrementalLearnFunction = None, # function to perform an incremental learning step
+    def __init__(self, model_id, # a unique ID to avoid mixing different models
+                 init_model_function, # inits the model. Accepts no parameters and returns the model
+                 apply_model_function, # function that applies the model. Has the object, and image, and a sequence containing resolutions as parameters
+                 weights_to_model_function = default_keras_weights_to_model_function, # put model weights inside the model.
+                 model_to_weights_function = default_keras_model_to_weights_function, # get the weights from the model in a pickable format
+                 calc_delta_function = default_keras_delta_function, # calculate the weight delta
+                 apply_delta_function = default_keras_apply_delta_function, # apply a weight delta
+                 incremental_learn_function = None, # function to perform an incremental learning step
                  weights = None): # initial weights
         self.model = None
-        self.modelID = modelID
-        self.initModelFunction = initModelFunction
-        self.weightsToModelFunction = weightsToModelFunction
-        self.modelToWeightsFunction = modelToWeightsFunction
-        self.applyModelFunction = applyModelFunction
-        self.calcDeltaFunction = calcDeltaFunction
-        self.applyDeltaFunction = applyDeltaFunction
-        self.incrementalLearnFunction = incrementalLearnFunction
-        self.initModel() # initializes the model
-        if weights: self.setWeights(weights)
+        self.model_id = model_id
+        self.init_model_function = init_model_function
+        self.weights_to_model_function = weights_to_model_function
+        self.model_to_weights_function = model_to_weights_function
+        self.apply_model_function = apply_model_function
+        self.calc_delta_function = calc_delta_function
+        self.apply_delta_function = apply_delta_function
+        self.incremental_learn_function = incremental_learn_function
+        self.init_model() # initializes the model
+        if weights: self.set_weights(weights)
         
-    def initModel(self):
+    def init_model(self):
         """
         Initializes the internal model
 
@@ -74,15 +74,15 @@ class DynamicDLModel(DeepLearningClass):
         None.
 
         """
-        self.model = self.initModelFunction()
+        self.model = self.init_model_function()
         
-    def setWeights(self, weights):
+    def set_weights(self, weights):
         """
         Loads the weights in the internal model
 
         Parameters
         ----------
-        weights : whatever is accepted by the modelToWeightsFunction
+        weights : whatever is accepted by the model_to_weights_function
             Weights to be loaded into the model
 
         Returns
@@ -90,22 +90,22 @@ class DynamicDLModel(DeepLearningClass):
         None.
 
         """
-        self.weightsToModelFunction(self, weights)
+        self.weights_to_model_function(self, weights)
         
-    def getWeights(self):
-        return self.modelToWeightsFunction(self)
+    def get_weights(self):
+        return self.model_to_weights_function(self)
         
-    def applyDelta(self, other):
-        return self.applyDelta(self, other)
+    def apply_delta(self, other):
+        return self.apply_delta(self, other)
     
-    def calcDelta(self, other):
-        return self.calcDelta(self, other)
+    def calc_delta(self, other):
+        return self.calc_delta(self, other)
     
     def apply(self, data):
-        return self.applyModelFunction(self, data)
+        return self.apply_model_function(self, data)
     
-    def incrementalLearn(self, trainingData, trainingOutputs):
-        self.incrementalLearnFunction(self, trainingData, trainingOutputs)
+    def incremental_learn(self, trainingData, trainingOutputs):
+        self.incremental_learn_function(self, trainingData, trainingOutputs)
         
     def dump(self, file):
         """
@@ -122,15 +122,15 @@ class DynamicDLModel(DeepLearningClass):
 
         """
         outputDict = {
-            'modelID': self.modelID,
-            'initModelFunction': self.initModelFunction,
-            'applyModelFunction': self.applyModelFunction,
-            'weightsToModelFunction': self.weightsToModelFunction,
-            'modelToWeightsFunction': self.modelToWeightsFunction,
-            'calcDeltaFunction': self.calcDeltaFunction,
-            'applyDeltaFunction': self.applyDeltaFunction,
-            'incrementalLearnFunction': self.incrementalLearnFunction,
-            'weights': self.getWeights()
+            'model_id': self.model_id,
+            'init_model_function': self.init_model_function,
+            'apply_model_function': self.apply_model_function,
+            'weights_to_model_function': self.weights_to_model_function,
+            'model_to_weights_function': self.model_to_weights_function,
+            'calc_delta_function': self.calc_delta_function,
+            'apply_delta_function': self.apply_delta_function,
+            'incremental_learn_function': self.incremental_learn_function,
+            'weights': self.get_weights()
             }
         
         dill.dump(outputDict, file)
@@ -140,7 +140,7 @@ class DynamicDLModel(DeepLearningClass):
         self.dump(file)
         return file.getvalue()
     
-    def getEmptyCopy(self) -> DynamicDLModel:
+    def get_empty_copy(self) -> DynamicDLModel:
         """
         Gets an empty copy (i.e. without weights) of the current object
 
@@ -150,7 +150,7 @@ class DynamicDLModel(DeepLearningClass):
             Output copy
 
         """
-        return DynamicDLModel(self.modelID, self.initModelFunction, self.applyModelFunction, self.weightsToModelFunction, self.modelToWeightsFunction, self.calcDeltaFunction, self.applyDeltaFunction, self.incrementalLearnFunction)
+        return DynamicDLModel(self.model_id, self.init_model_function, self.apply_model_function, self.weights_to_model_function, self.model_to_weights_function, self.calc_delta_function, self.apply_delta_function, self.incremental_learn_function)
     
     @staticmethod
     def Load(file) -> DynamicDLModel:
