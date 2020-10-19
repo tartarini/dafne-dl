@@ -8,17 +8,17 @@ Such top level functions should define all the imports within themselves (i.e. d
 @author: francesco
 """
 from __future__ import annotations
-from .interfaces import IncompatibleModelError, Image2DDeepLearning
+from .interfaces import IncompatibleModelError, DeepLearningClass
 import dill
 from io import BytesIO
 
-def defaultKerasWeightsToModelFunction(modelObj: DynamicImage2DModel, weights):
+def defaultKerasWeightsToModelFunction(modelObj: DynamicDLModel, weights):
     modelObj.model.set_weights(weights)
     
-def defaultKerasModelToWeightsFunction(modelObj: DynamicImage2DModel):
+def defaultKerasModelToWeightsFunction(modelObj: DynamicDLModel):
     return modelObj.model.get_weights()
 
-def defaultKerasDeltaFunction(lhs: DynamicImage2DModel, rhs: DynamicImage2DModel):
+def defaultKerasDeltaFunction(lhs: DynamicDLModel, rhs: DynamicDLModel):
     if lhs.modelID != rhs.modelID: raise IncompatibleModelError
     lhs_weights = lhs.getWeights()
     rhs_weights = rhs.getWeights()
@@ -29,7 +29,7 @@ def defaultKerasDeltaFunction(lhs: DynamicImage2DModel, rhs: DynamicImage2DModel
     outputObj.setWeights(newWeights)
     return outputObj
 
-def defaultKerasApplyDeltaFunction(lhs: DynamicImage2DModel, rhs: DynamicImage2DModel):
+def defaultKerasApplyDeltaFunction(lhs: DynamicDLModel, rhs: DynamicDLModel):
     if lhs.modelID != rhs.modelID: raise IncompatibleModelError
     lhs_weights = lhs.getWeights()
     rhs_weights = rhs.getWeights()
@@ -40,7 +40,7 @@ def defaultKerasApplyDeltaFunction(lhs: DynamicImage2DModel, rhs: DynamicImage2D
     outputObj.setWeights(newWeights)
     return outputObj
 
-class DynamicImage2DModel(Image2DDeepLearning):
+class DynamicDLModel(DeepLearningClass):
     """
     Class to represent a deep learning model that can be serialized/deserialized
     """
@@ -101,8 +101,8 @@ class DynamicImage2DModel(Image2DDeepLearning):
     def calcDelta(self, other):
         return self.calcDelta(self, other)
     
-    def apply(self, image, resolution):
-        return self.applyModelFunction(self, image, resolution)
+    def apply(self, data):
+        return self.applyModelFunction(self, data)
     
     def incrementalLearn(self, trainingData, trainingOutputs):
         self.incrementalLearnFunction(self, trainingData, trainingOutputs)
@@ -133,27 +133,27 @@ class DynamicImage2DModel(Image2DDeepLearning):
             'weights': self.getWeights()
             }
         
-        return dill.dumps(outputDict, file)
+        dill.dump(outputDict, file)
     
     def dumps(self) -> bytes:
         file = BytesIO()
         self.dump(file)
         return file.getvalue()
     
-    def getEmptyCopy(self) -> DynamicImage2DModel:
+    def getEmptyCopy(self) -> DynamicDLModel:
         """
         Gets an empty copy (i.e. without weights) of the current object
 
         Returns
         -------
-        DynamicImage2DModel
+        DynamicDLModel
             Output copy
 
         """
-        return DynamicImage2DModel(self.modelID, self.initModelFunction, self.applyModelFunction, self.weightsToModelFunction, self.modelToWeightsFunction, self.calcDeltaFunction, self.applyDeltaFunction, self.incrementalLearnFunction)
+        return DynamicDLModel(self.modelID, self.initModelFunction, self.applyModelFunction, self.weightsToModelFunction, self.modelToWeightsFunction, self.calcDeltaFunction, self.applyDeltaFunction, self.incrementalLearnFunction)
     
     @staticmethod
-    def Load(file) -> DynamicImage2DModel:
+    def Load(file) -> DynamicDLModel:
         """
         Creates an object from a file
 
@@ -164,16 +164,17 @@ class DynamicImage2DModel(Image2DDeepLearning):
 
         Returns
         -------
-        DynamicImage2DModel
+        DynamicDLModel
             A new instance of a dynamic model
 
         """
         
         inputDict = dill.load(file)
-        outputObj = DynamicImage2DModel(**inputDict)
+        outputObj = DynamicDLModel(**inputDict)
+        return outputObj
         
     @staticmethod
-    def Loads(b: bytes) -> DynamicImage2DModel:
+    def Loads(b: bytes) -> DynamicDLModel:
         """
         Creates an object from a binary dump
 
@@ -184,9 +185,9 @@ class DynamicImage2DModel(Image2DDeepLearning):
 
         Returns
         -------
-        DynamicImage2DModel
+        DynamicDLModel
             A new instance of a dynamic model
 
         """
         file = BytesIO(b)
-        return DynamicImage2DModel.Load(file)
+        return DynamicDLModel.Load(file)

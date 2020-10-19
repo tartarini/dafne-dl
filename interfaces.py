@@ -87,20 +87,16 @@ class DeepLearningClass(ABC):
 
         """
         pass
-
-class Image2DDeepLearning(DeepLearningClass):
-
+    
     @abstractmethod
-    def apply(self, image2D, resolution):
+    def apply(self, data: dict):
         """
         Applies the deep learning model to the image
 
         Parameters
         ----------
-        image2D : Two-dimensional image
-            Must be convertible to a numpy array
-        resolution : sequence (tuple or array)
-            Voxel size of the image for resampling
+        data : Dictionary
+            Contains the data and the extra information (for example image and resolution)
 
         Returns
         -------
@@ -110,6 +106,9 @@ class Image2DDeepLearning(DeepLearningClass):
 
         """
         pass
+
+    def __call__(self, data: dict):
+        return self.apply(data)
 
 class ModelProvider(ABC):
     """
