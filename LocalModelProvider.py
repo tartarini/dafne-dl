@@ -21,7 +21,9 @@ class LocalModelProvider(ModelProvider):
         self.models_path = models_path
         
     def load_model(self, modelName: str) -> DynamicDLModel:
+        print("Loading model:", modelName)
         model_file = os.path.join(self.models_path, MODEL_NAMES_MAP[modelName])
+        print("Done")
         return DynamicDLModel.Load( open(model_file, 'rb'))
     
     def available_models(self) -> str:
