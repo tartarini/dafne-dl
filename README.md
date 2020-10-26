@@ -29,6 +29,3 @@ This allows the implementation of a very generic deep learning algorithm which i
 The class provides the methods `dump(file_descriptor)` and `str = dumps()` to serialize and the static methods `Load(file_descriptor)` and `Loads(str)` to deserialize.
 Default functions for loading/setting keras weights and calculating deltas from keras models (which provide a get_weights(), set_weights() interface with lists of numpy arrays) are currently provided.
 **Important note when defining the functions**: in order for them to be serializable, they must be completely self-contained. That is, all imports should happen inside the functions and all the external function call should be implemented as nested functions. Common algorithms (such as padorcut.py which pads or cuts an image to fit it to a specific matrix size) should be placed in the repository.
-
-
-### test123 4
