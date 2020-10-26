@@ -22,7 +22,7 @@ class LocalModelProvider(ModelProvider):
         
     def load_model(self, modelName: str) -> DynamicDLModel:
         print("Loading model:", modelName)
-        model_file = os.path.join(self.models_path, MODEL_NAMES_MAP[modelName])
+        model_file = os.path.join(self.MODELS_DIR, MODEL_NAMES_MAP[modelName])
         print("Done")
         return DynamicDLModel.Load( open(model_file, 'rb'))
     

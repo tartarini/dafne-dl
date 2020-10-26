@@ -96,10 +96,10 @@ class DynamicDLModel(DeepLearningClass):
         return self.model_to_weights_function(self)
         
     def apply_delta(self, other):
-        return self.apply_delta(self, other)
+        return self.apply_delta_function(self, other)
     
     def calc_delta(self, other):
-        return self.calc_delta(self, other)
+        return self.calc_delta_function(self, other)
     
     def apply(self, data):
         return self.apply_model_function(self, data)
