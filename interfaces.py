@@ -70,16 +70,16 @@ class DeepLearningClass(ABC):
         return self.apply_delta(rhs)
     
     @abstractmethod
-    def incremental_learn(self, training_data, training_outputs):
+    def incremental_learn(self, training_data: dict, training_outputs: string):
         """
         Perform an incremental learning step on the given training data/outputs
 
         Parameters
         ----------
-        training_data : TYPE
-            Training data.
-        training_outputs : TYPE
-            Training outputs.
+        training_data : Dictionary
+            Contains the path to the training data and resolution.
+        training_outputs : String
+            Contains the path to the training labels.
 
         Returns
         -------
