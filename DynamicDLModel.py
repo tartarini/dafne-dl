@@ -40,6 +40,12 @@ def default_keras_apply_delta_function(lhs: DynamicDLModel, rhs: DynamicDLModel)
     outputObj.set_weights(newWeights)
     return outputObj
 
+def default_keras_weight_copy_function(weights_in):
+    weights_out = []
+    for layer in weights_in:
+        weights_out.append(layer.copy())
+    return weights_out
+
 class DynamicDLModel(DeepLearningClass):
     """
     Class to represent a deep learning model that can be serialized/deserialized
@@ -51,6 +57,7 @@ class DynamicDLModel(DeepLearningClass):
                  model_to_weights_function = default_keras_model_to_weights_function, # get the weights from the model in a pickable format
                  calc_delta_function = default_keras_delta_function, # calculate the weight delta
                  apply_delta_function = default_keras_apply_delta_function, # apply a weight delta
+                 weight_copy_function = default_keras_weight_copy_function, # create a deep copy of weights
                  incremental_learn_function = None, # function to perform an incremental learning step
                  weights = None): # initial weights
         self.model = None
@@ -62,6 +69,7 @@ class DynamicDLModel(DeepLearningClass):
         self.calc_delta_function = calc_delta_function
         self.apply_delta_function = apply_delta_function
         self.incremental_learn_function = incremental_learn_function
+        self.weight_copy_function = weight_copy_function
         self.init_model() # initializes the model
         if weights: self.set_weights(weights)
         
@@ -151,7 +159,21 @@ class DynamicDLModel(DeepLearningClass):
 
         """
         return DynamicDLModel(self.model_id, self.init_model_function, self.apply_model_function, self.weights_to_model_function, self.model_to_weights_function, self.calc_delta_function, self.apply_delta_function, self.incremental_learn_function)
-    
+
+    def copy(self) -> DynamicDLModel:
+        """
+        Gets a copy (i.e. with weights) of the current object
+
+        Returns
+        -------
+        DynamicDLModel
+            Output copy
+
+        """
+        model_out = self.get_empty_copy()
+        model_out.set_weights( self.weight_copy_function(self.get_weights()) )
+        return model_out
+
     @staticmethod
     def Load(file) -> DynamicDLModel:
         """
