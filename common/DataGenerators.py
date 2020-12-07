@@ -2,6 +2,7 @@
 #from collections import Sequence
 from keras.utils import Sequence
 import numpy as np
+import os
 
 # This is NOT a general implementation! See the number of masks below
 class DataGeneratorDir(Sequence):
