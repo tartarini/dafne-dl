@@ -11,11 +11,7 @@ from .interfaces import ModelProvider
 from .DynamicDLModel import DynamicDLModel
 
 
-MODEL_NAMES_MAP = {
-    'Classifier': 'classifier.model',
-    'Thigh': 'thigh.model',
-    'Leg': 'leg.model'
-    }
+AVAILABLE_MODELS = ["Classifier", "Thigh", "Leg"]
 
 class LocalModelProvider(ModelProvider):
     
@@ -23,10 +19,16 @@ class LocalModelProvider(ModelProvider):
         self.models_path = Path(models_path)
         
     def load_model(self, modelName: str) -> DynamicDLModel:
-        print("Loading model:", modelName)
-        model_file = self.models_path / MODEL_NAMES_MAP[modelName]
-        print("Done")
+        print(f"Loading model: {modelName}")
+        if modelName not in AVAILABLE_MODELS:
+            raise ValueError()
+        model_name = modelName.lower()
+        model_file = list(self.models_path.glob(f"{modelName}_*.model"))
+        if len(model_file) == 0:
+            raise FileNotFoundError("Could not find model file.")
+        if len(model_file) > 1:
+            raise ValueError(f"More than one '{modelName}' model found.")
         return DynamicDLModel.Load(open(model_file, 'rb'))
     
     def available_models(self) -> str:
-        return list(MODEL_NAMES_MAP.keys())
+        return AVAILABLE_MODELS
