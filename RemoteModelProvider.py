@@ -3,7 +3,6 @@
 import os
 from pathlib import Path
 import requests
-import shutil
 
 from .interfaces import ModelProvider
 from .DynamicDLModel import DynamicDLModel
@@ -35,11 +34,10 @@ class RemoteModelProvider(ModelProvider):
             DynamicDLModel or None
         """
         print(f"Loading model: {modelName}")
-        model_name = modelName.lower()
 
         # Get the name of the latest model
         r = requests.post(self.url_base + "info_model",
-                          json={"model_type": model_name,
+                          json={"model_type": modelName,
                                 "api_key": self.api_key})
         if r.ok:
             latest_timestamp = r.json()['latest_timestamp']

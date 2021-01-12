@@ -22,7 +22,6 @@ class LocalModelProvider(ModelProvider):
         print(f"Loading model: {modelName}")
         if modelName not in AVAILABLE_MODELS:
             raise ValueError()
-        model_name = modelName.lower()
         model_file = list(self.models_path.glob(f"{modelName}_*.model"))
         if len(model_file) == 0:
             raise FileNotFoundError("Could not find model file.")
@@ -32,3 +31,6 @@ class LocalModelProvider(ModelProvider):
     
     def available_models(self) -> str:
         return AVAILABLE_MODELS
+
+    def upload_model(self, modelName: str, model: DynamicDLModel):
+        print("You are using the LocalModelProvider. Therefore no upload is done!")
