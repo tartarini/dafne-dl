@@ -18,13 +18,16 @@ def default_keras_weights_to_model_function(modelObj: DynamicDLModel, weights):
 def default_keras_model_to_weights_function(modelObj: DynamicDLModel):
     return modelObj.model.get_weights()
 
-def default_keras_delta_function(lhs: DynamicDLModel, rhs: DynamicDLModel, threshold=0):
+def default_keras_delta_function(lhs: DynamicDLModel, rhs: DynamicDLModel, threshold=None):
     if lhs.model_id != rhs.model_id: raise IncompatibleModelError
     lhs_weights = lhs.get_weights()
     rhs_weights = rhs.get_weights()
     newWeights = []
     for depth in range(len(lhs_weights)):
-        newWeights.append(lhs_weights[depth] - rhs_weights[depth])
+        delta = lhs_weights[depth] - rhs_weights[depth]
+        if threshold is not None:
+            delta[delta < threshold] = 0
+        newWeights.append(delta)
     outputObj = lhs.get_empty_copy()
     outputObj.set_weights(newWeights)
     return outputObj
@@ -106,7 +109,7 @@ class DynamicDLModel(DeepLearningClass):
     def apply_delta(self, other):
         return self.apply_delta_function(self, other)
     
-    def calc_delta(self, other, threshold = 0):
+    def calc_delta(self, other, threshold=None):
         return self.calc_delta_function(self, other, threshold)
     
     def apply(self, data):

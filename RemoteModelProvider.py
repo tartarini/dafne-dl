@@ -3,7 +3,6 @@
 import os
 from pathlib import Path
 import requests
-import shutil
 
 from .interfaces import ModelProvider
 from .DynamicDLModel import DynamicDLModel
@@ -24,9 +23,9 @@ class RemoteModelProvider(ModelProvider):
         self.url_base = 'http://localhost:5000/'
         self.api_key = "abc123"
 
-    def load_model(self, modelName: str, store_on_disk=True) -> DynamicDLModel:
+    def load_model(self, modelName: str) -> DynamicDLModel:
         """
-        Load latest model from remote server
+        Load latest model from remote server if it does not already exist locally.
 
         Args:
             modelName: Classifier | Thigh | Leg
@@ -35,11 +34,10 @@ class RemoteModelProvider(ModelProvider):
             DynamicDLModel or None
         """
         print(f"Loading model: {modelName}")
-        model_name = modelName.lower()
 
         # Get the name of the latest model
         r = requests.post(self.url_base + "info_model",
-                          json={"model_type": model_name,
+                          json={"model_type": modelName,
                                 "api_key": self.api_key})
         if r.ok:
             latest_timestamp = r.json()['latest_timestamp']
@@ -47,6 +45,15 @@ class RemoteModelProvider(ModelProvider):
             print("ERROR: Request to server failed")
             print(f"status code: {r.status_code}")
             print(f"message: {r.json()['message']}")
+            return None
+
+        # Check if model already exists locally
+        latest_model_path = self.models_path / f"{modelName}_{latest_timestamp}.model"
+        if os.path.exists(latest_model_path):
+            print("Model already downloaded. Loading...")
+            return DynamicDLModel.Load(open(latest_model_path, 'rb'))
+        else:
+            print("Downloading new model...")
 
         # Receive model
         r = requests.post(self.url_base + "get_model",
@@ -54,7 +61,9 @@ class RemoteModelProvider(ModelProvider):
                                 "timestamp": latest_timestamp,
                                 "api_key": self.api_key})
         if r.ok:
-            return DynamicDLModel.Loads(r.content)
+            model = DynamicDLModel.Loads(r.content)
+            model.dump(open(latest_model_path, "wb"))
+            return model
         else:
             print("ERROR: Request to server failed")
             print(f"status code: {r.status_code}")
