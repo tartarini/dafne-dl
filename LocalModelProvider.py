@@ -30,3 +30,6 @@ class LocalModelProvider(ModelProvider):
     
     def available_models(self) -> str:
         return list(MODEL_NAMES_MAP.keys())
+
+    def upload_model(self, model_name, model):
+        pass

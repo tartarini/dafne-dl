@@ -131,3 +131,15 @@ class ModelProvider(ABC):
 
         """
         pass
+
+    @abstractmethod
+    def upload_model(self, model_name: str, model: DeepLearningClass):
+        """
+        Parameters
+        ----------
+        model_name : str
+            The name of the model to upload.
+        model:
+            The model to be uploaded
+        """
+        pass
