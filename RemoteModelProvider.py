@@ -8,11 +8,8 @@ from .interfaces import ModelProvider
 from .DynamicDLModel import DynamicDLModel
 
 
-MODEL_NAMES_MAP = {
-    'Classifier': 'classifier.model',
-    'Thigh': 'thigh.model',
-    'Leg': 'leg.model'
-    }
+AVAILABLE_MODELS = ["Classifier", "Thigh", "Leg"]
+
 
 class RemoteModelProvider(ModelProvider):
     
@@ -51,13 +48,14 @@ class RemoteModelProvider(ModelProvider):
         latest_model_path = self.models_path / f"{modelName}_{latest_timestamp}.model"
         if os.path.exists(latest_model_path):
             print("Model already downloaded. Loading...")
-            return DynamicDLModel.Load(open(latest_model_path, 'rb'))
+            model = DynamicDLModel.Load(open(latest_model_path, 'rb'))
+            return model
         else:
             print("Downloading new model...")
 
         # Receive model
         r = requests.post(self.url_base + "get_model",
-                          json={"model_type": model_name,
+                          json={"model_type": modelName,
                                 "timestamp": latest_timestamp,
                                 "api_key": self.api_key})
         if r.ok:
@@ -71,7 +69,7 @@ class RemoteModelProvider(ModelProvider):
             return None
     
     def available_models(self) -> str:
-        return list(MODEL_NAMES_MAP.keys())
+        return AVAILABLE_MODELS
 
     def upload_model(self, modelName: str, model: DynamicDLModel):
         """

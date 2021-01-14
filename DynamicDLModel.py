@@ -62,7 +62,8 @@ class DynamicDLModel(DeepLearningClass):
                  apply_delta_function = default_keras_apply_delta_function, # apply a weight delta
                  weight_copy_function = default_keras_weight_copy_function, # create a deep copy of weights
                  incremental_learn_function = None, # function to perform an incremental learning step
-                 weights = None): # initial weights
+                 weights = None, # initial weights
+                 timestamp_id = None): 
         self.model = None
         self.model_id = model_id
         self.init_model_function = init_model_function
@@ -74,6 +75,7 @@ class DynamicDLModel(DeepLearningClass):
         self.incremental_learn_function = incremental_learn_function
         self.weight_copy_function = weight_copy_function
         self.init_model() # initializes the model
+        self.timestamp_id = timestamp_id  # unique timestamp id; used to identify model versions during federated learning
         if weights: self.set_weights(weights)
         
     def init_model(self):
