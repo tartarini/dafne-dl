@@ -11,6 +11,7 @@ from __future__ import annotations
 from .interfaces import IncompatibleModelError, DeepLearningClass
 import dill
 from io import BytesIO
+import numpy as np
 
 def default_keras_weights_to_model_function(modelObj: DynamicDLModel, weights):
     modelObj.model.set_weights(weights)
@@ -26,7 +27,7 @@ def default_keras_delta_function(lhs: DynamicDLModel, rhs: DynamicDLModel, thres
     for depth in range(len(lhs_weights)):
         delta = lhs_weights[depth] - rhs_weights[depth]
         if threshold is not None:
-            delta[delta < threshold] = 0
+            delta[np.abs(delta) < threshold] = 0
         newWeights.append(delta)
     outputObj = lhs.get_empty_copy()
     outputObj.set_weights(newWeights)
@@ -117,8 +118,8 @@ class DynamicDLModel(DeepLearningClass):
     def apply(self, data):
         return self.apply_model_function(self, data)
     
-    def incremental_learn(self, trainingData, trainingOutputs):
-        self.incremental_learn_function(self, trainingData, trainingOutputs)
+    def incremental_learn(self, trainingData, trainingOutputs, bs=5, minTrainImages=5):
+        self.incremental_learn_function(self, trainingData, trainingOutputs, bs, minTrainImages)
         
     def dump(self, file):
         """
