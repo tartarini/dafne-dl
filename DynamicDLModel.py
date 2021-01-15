@@ -144,7 +144,8 @@ class DynamicDLModel(DeepLearningClass):
             'calc_delta_function': self.calc_delta_function,
             'apply_delta_function': self.apply_delta_function,
             'incremental_learn_function': self.incremental_learn_function,
-            'weights': self.get_weights()
+            'weights': self.get_weights(),
+            "timestamp_id": self.timestamp_id
             }
         
         dill.dump(outputDict, file)
