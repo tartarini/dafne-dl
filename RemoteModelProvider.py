@@ -61,6 +61,15 @@ class RemoteModelProvider(ModelProvider):
         if r.ok:
             model = DynamicDLModel.Loads(r.content)
             model.dump(open(latest_model_path, "wb"))
+
+            # Deleting older models
+            old_models = self.models_path.glob(f"{modelName}_*.model")
+            print("Deleting old models: ")
+            for old_model in old_models:
+                if old_model != latest_model_path:
+                    print(f"  Deleting: {str(old_model)}")
+                    os.remove(old_model)
+
             return model
         else:
             print("ERROR: Request to server failed")
