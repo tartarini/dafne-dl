@@ -11,6 +11,7 @@ from __future__ import annotations
 from .interfaces import IncompatibleModelError, DeepLearningClass
 import dill
 from io import BytesIO
+import numpy as np
 
 def default_keras_weights_to_model_function(modelObj: DynamicDLModel, weights):
     modelObj.model.set_weights(weights)
@@ -26,7 +27,7 @@ def default_keras_delta_function(lhs: DynamicDLModel, rhs: DynamicDLModel, thres
     for depth in range(len(lhs_weights)):
         delta = lhs_weights[depth] - rhs_weights[depth]
         if threshold is not None:
-            delta[delta < threshold] = 0
+            delta[np.abs(delta) < threshold] = 0
         newWeights.append(delta)
     outputObj = lhs.get_empty_copy()
     outputObj.set_weights(newWeights)
@@ -62,7 +63,8 @@ class DynamicDLModel(DeepLearningClass):
                  apply_delta_function = default_keras_apply_delta_function, # apply a weight delta
                  weight_copy_function = default_keras_weight_copy_function, # create a deep copy of weights
                  incremental_learn_function = None, # function to perform an incremental learning step
-                 weights = None): # initial weights
+                 weights = None, # initial weights
+                 timestamp_id = None): 
         self.model = None
         self.model_id = model_id
         self.init_model_function = init_model_function
@@ -74,6 +76,7 @@ class DynamicDLModel(DeepLearningClass):
         self.incremental_learn_function = incremental_learn_function
         self.weight_copy_function = weight_copy_function
         self.init_model() # initializes the model
+        self.timestamp_id = timestamp_id  # unique timestamp id; used to identify model versions during federated learning
         if weights: self.set_weights(weights)
         
     def init_model(self):
@@ -115,8 +118,8 @@ class DynamicDLModel(DeepLearningClass):
     def apply(self, data):
         return self.apply_model_function(self, data)
     
-    def incremental_learn(self, trainingData, trainingOutputs):
-        self.incremental_learn_function(self, trainingData, trainingOutputs)
+    def incremental_learn(self, trainingData, trainingOutputs, bs=5, minTrainImages=5):
+        self.incremental_learn_function(self, trainingData, trainingOutputs, bs, minTrainImages)
         
     def dump(self, file):
         """
@@ -141,7 +144,8 @@ class DynamicDLModel(DeepLearningClass):
             'calc_delta_function': self.calc_delta_function,
             'apply_delta_function': self.apply_delta_function,
             'incremental_learn_function': self.incremental_learn_function,
-            'weights': self.get_weights()
+            'weights': self.get_weights(),
+            "timestamp_id": self.timestamp_id
             }
         
         dill.dump(outputDict, file)

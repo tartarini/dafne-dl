@@ -20,14 +20,12 @@ class LocalModelProvider(ModelProvider):
         
     def load_model(self, modelName: str) -> DynamicDLModel:
         print(f"Loading model: {modelName}")
-        if modelName not in AVAILABLE_MODELS:
-            raise ValueError()
         model_file = list(self.models_path.glob(f"{modelName}_*.model"))
         if len(model_file) == 0:
             raise FileNotFoundError("Could not find model file.")
         if len(model_file) > 1:
             raise ValueError(f"More than one '{modelName}' model found.")
-        return DynamicDLModel.Load(open(model_file, 'rb'))
+        return DynamicDLModel.Load(open(model_file[0], 'rb'))
     
     def available_models(self) -> str:
         return AVAILABLE_MODELS
