@@ -11,6 +11,7 @@ def biascorrection(file_or_image):
 def biascorrection_image(image):
     if not type(image) == sitk.SimpleITK.Image:
         image = sitk.GetImageFromArray(image)
+        image=sitk.Cast(image, sitk.sitkFloat32)
     maskImage = sitk.OtsuThreshold(image, 0, 1, 200)
     corrector = sitk.N4BiasFieldCorrectionImageFilter()
     numberFittingLevels = 4
