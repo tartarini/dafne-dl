@@ -11,7 +11,7 @@ from .interfaces import ModelProvider
 from .DynamicDLModel import DynamicDLModel
 
 
-AVAILABLE_MODELS = ["Classifier", "Thigh", "Leg"]
+AVAILABLE_MODELS = ["Classifier", "Thigh", "Leg", "Thigh-Split", "Leg-Split"]
 
 class LocalModelProvider(ModelProvider):
     
