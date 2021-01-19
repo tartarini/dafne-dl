@@ -165,7 +165,11 @@ class DynamicDLModel(DeepLearningClass):
             Output copy
 
         """
-        return DynamicDLModel(self.model_id, self.init_model_function, self.apply_model_function, self.weights_to_model_function, self.model_to_weights_function, self.calc_delta_function, self.apply_delta_function, self.incremental_learn_function)
+        return DynamicDLModel(self.model_id, self.init_model_function, self.apply_model_function,
+                              self.weights_to_model_function, self.model_to_weights_function,
+                              self.calc_delta_function, self.apply_delta_function, 
+                              self.weight_copy_function, self.incremental_learn_function, 
+                              None, self.timestamp_id)
 
     def copy(self) -> DynamicDLModel:
         """
