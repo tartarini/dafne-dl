@@ -264,9 +264,9 @@ def input_creation_mem(image_list: list, mask_list: list, band: float):
 
     return output_data
 
-def common_input_process(LABELS_DICT, MODEL_RESOLUTION, MODEL_SIZE, trainingData, trainingOutputs):
-    inverse_label_dict = {v: k for k, v in LABELS_DICT.items()}
-    nlabels = len(LABELS_DICT)+1
+def common_input_process(inverse_label_dict, MODEL_RESOLUTION, MODEL_SIZE, trainingData, trainingOutputs):
+    # inverse_label_dict = {v: k for k, v in LABELS_DICT.items()}
+    nlabels = len(set(inverse_label_dict.values()))+1 # get the number of unique values in the inverse dict
     min_defined_rois = nlabels/2 # do not add to the training set if less than this number of ROIs are defined
     resolution = np.array(trainingData['resolution'])
     zoomFactor = resolution / MODEL_RESOLUTION
@@ -294,9 +294,8 @@ def common_input_process(LABELS_DICT, MODEL_RESOLUTION, MODEL_SIZE, trainingData
 
     return image_list, mask_list
 
-def common_input_process_split(LABELS_DICT, MODEL_RESOLUTION, MODEL_SIZE, MODEL_SIZE_SPLIT, trainingData, trainingOutputs):
-    inverse_label_dict = {v: k for k, v in LABELS_DICT.items()}
-    nlabels = len(LABELS_DICT)+1
+def common_input_process_split(inverse_label_dict, MODEL_RESOLUTION, MODEL_SIZE, MODEL_SIZE_SPLIT, trainingData, trainingOutputs):
+    nlabels = len(set(inverse_label_dict.values()))+1 # get the number of unique values in the inverse dict
     min_defined_rois = nlabels/2 # do not add to the training set if less than this number of ROIs are defined
     resolution = np.array(trainingData['resolution'])
     zoomFactor = resolution / MODEL_RESOLUTION
