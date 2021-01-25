@@ -6,6 +6,7 @@ import requests
 
 from .interfaces import ModelProvider
 from .DynamicDLModel import DynamicDLModel
+from typing import IO
 
 
 AVAILABLE_MODELS = ["Classifier", "Thigh", "Leg", "Thigh_Split", "Leg_Split"]
@@ -96,3 +97,7 @@ class RemoteModelProvider(ModelProvider):
                                 "api_key": self.api_key})
         print(f"status code: {r.status_code}")
         print(f"message: {r.json()['message']}")
+
+    def _upload_bytes(self, data: IO):
+        # TODO implementation of data upload
+        print("Data upload not yet implemented")

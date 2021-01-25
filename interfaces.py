@@ -7,6 +7,9 @@ Created on Thu Oct 15 19:25:52 2020
 """
 from __future__ import annotations
 from abc import ABC, abstractmethod
+from io import BytesIO
+from typing import IO, Union
+import numpy as np
 
 
 class IncompatibleModelError(Exception):
@@ -141,5 +144,33 @@ class ModelProvider(ABC):
             The name of the model to upload.
         model:
             The model to be uploaded
+        """
+        pass
+
+    def upload_data(self, data: dict):
+        """
+        Uploads data to the server. Converts the data into a stream before calling _upload_bytes
+
+        Parameters
+        ----------
+        data: dict
+            Dictionary of objects that can be saved by Numpy and loaded without using pickle (which is unsafe)
+        """
+        bytes_io = BytesIO()
+        np.savez_compressed(bytes_io, **data)
+        self._upload_bytes(bytes_io)
+        bytes_io.close()
+
+
+    @abstractmethod
+    def _upload_bytes(self, data: IO):
+        """
+        Uploads generic data to the server. This is an internal function that implements the server communication.
+        The actual function to be called by the client is upload_data with a dict
+
+        Parameters
+        ----------
+        data: IO
+            byte stream that is sent to the server.
         """
         pass
