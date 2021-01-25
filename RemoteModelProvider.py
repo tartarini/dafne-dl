@@ -100,4 +100,6 @@ class RemoteModelProvider(ModelProvider):
 
     def _upload_bytes(self, data: IO):
         # TODO implementation of data upload
+        # Note: the don't pass data directly to requests because the byte stream is not at the start.
+        # Use getbuffer or getvalue instead. See https://github.com/psf/requests/issues/2589
         print("Data upload not yet implemented")
