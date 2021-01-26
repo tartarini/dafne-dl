@@ -5,6 +5,7 @@ import os
 import skimage
 from skimage.morphology import square
 from .padorcut import padorcut
+import dl.common.biascorrection as biascorrection
 from scipy.ndimage import zoom
 import math
 from skimage.filters import threshold_otsu
@@ -21,84 +22,76 @@ def to_mask(categorical_mask,dim,ch):  ##ch: number of labels. ch = 13 for thigh
     return segmentation_mask
 
 
-def split_mirror(path,card,ch):
+def split_mirror(image):
     '''
     Function to split the training data into left and mirrored right parts cropped and zoomed/padorcutted. 
     '''
-    MODEL_SIZE = (270, 270) 
+    import skimage
+    from skimage.morphology import square
     from skimage.filters import threshold_local
-    for j in range(1,card+1):
-        arr=np.load(os.path.join(path,'train_'+str(j)+'.npy'))
-        image=arr[:,:,0]
-        if arr.shape[2]==2:
-            roi=arr[:,:,1] 
-        else:
-            roi=to_mask(arr,432,ch)
-        block_size = 15
-        # convert image to binary mask
-        local_thresh = threshold_local(image, block_size, offset=10)
-        binary_local = image > local_thresh
-        binary_local=binary_local==0.0
-        # remove small black and white spots
-        binary_local=skimage.morphology.area_opening(binary_local,area_threshold=20)
-        binary_local=skimage.morphology.area_closing(binary_local,area_threshold=20)
-        mountainsc=binary_local[:,:].sum(axis=0)
-        mountainsr=binary_local[:,:].sum(axis=1)
-        s=0
-        p=0
-        ii=0 
-        jj=0
-        a1=0
-        a2=0
-        a3=0
-        a4=0
-        b1=0
-        b2=0
-        #iterate through columns and find transition (black)-white-black-white-black
-        while s!=4:
-            if mountainsc[ii]>0 and s==0:
-                s=1
-                a1=ii
-            if mountainsc[ii]==0 and s==1:
-                s=2
-                a2=ii
-            if mountainsc[ii]>0 and s==2:
-                s=3
-                a3=ii
-            if mountainsc[ii]==0 and s==3:
-                s=4
-                a4=ii
-            ii+=1
-            # this means that there is only one patch (legs as attached). Set the splitting point in the middle
-            if ii==432 and s==2:
-                s=4
-                a4=a2
-                a2=np.ceil((a4-a1)/2)+a1
-                a3=np.ceil((a4-a1)/2)+a1
-
-        # iterate over columns and find the (black)-white-black transition
-        while p!=2:
-            if mountainsr[jj]>0 and p==0:
-                p=1
-                b1=jj
-            if mountainsr[jj]==0 and p==1:
-                p=2
-                b2=jj
-            jj+=1
-        left=image[int(b1):int(b2),int(a1):int(a2)]
-        left=padorcut(left, MODEL_SIZE)
-        right=image[int(b1):int(b2),int(a3):int(a4)]
-        right=right[::1,::-1]
-        right=padorcut(right, MODEL_SIZE)
-        roileft=roi[int(b1):int(b2),int(a1):int(a2)]
-        roileft=padorcut(roileft, MODEL_SIZE)
-        roiright=roi[int(b1):int(b2),int(a3):int(a4)]
-        roiright=roiright[::1,::-1]
-        roiright=padorcut(roiright, MODEL_SIZE)
-        conc_left=np.stack((left,roileft),axis=-1)
-        np.save(os.path.join(path,'train_'+str(j)),conc_left)
-        conc_right=np.stack((right,roiright),axis=-1)
-        np.save(os.path.join(path,'train_'+str(card+j)),conc_right)
+    block_size = 15
+    # convert image to binary mask
+    local_thresh = threshold_local(image, block_size, offset=10)
+    binary_local = image > local_thresh
+    binary_local=binary_local==0.0
+    # remove small black and white spots
+    binary_local=skimage.morphology.area_opening(binary_local,area_threshold=4) #20
+    binary_local=skimage.morphology.area_closing(binary_local,area_threshold=4) #20
+    mountainsc=binary_local[:,:].sum(axis=0)
+    mountainsr=binary_local[:,:].sum(axis=1)
+    s=0
+    p=0
+    ii=0 
+    jj=0
+    a1=0
+    a2=0
+    a3=0
+    a4=0
+    b1=0
+    b2=0
+    #iterate through columns and find transition (black)-white-black-white-black
+    while s!=4 and ii<432:
+        if mountainsc[ii]>0 and s==0:
+            s=1
+            a1=ii
+        if mountainsc[ii]==0 and s==1 and (ii-a1)>20:
+            s=2
+            a2=ii
+        if mountainsc[ii]>0 and s==2:
+            s=3
+            a3=ii
+        if mountainsc[ii]==0 and s==3 and (ii-a3)>20:
+            s=4
+            a4=ii
+        elif mountainsc[ii]==0 and s==3 and (ii-a3)<20:
+            s=2
+        ii+=1
+        # this means that there is only one patch (legs as attached). Set the splitting point in the middle
+        if ii==432 and s==2:
+            s=4
+            a4=a2
+            a2=np.ceil((a4-a1)/2)+a1
+            a3=np.ceil((a4-a1)/2)+a1
+        if ii==432 and s==3:
+            s=4
+            a4=431
+            #a2=np.ceil((a4-a1)/2)+a1
+            #a3=np.ceil((a4-a1)/2)+a1
+        if ii==432 and s==1:
+            s=4
+            a4=431
+            a2=np.ceil((a4-a1)/2)+a1
+            a3=np.ceil((a4-a1)/2)+a1
+    # iterate over columns and find the (black)-white-black transition
+    while p!=2:
+        if mountainsr[jj]>0 and p==0:
+            p=1
+            b1=jj
+        if mountainsr[jj]==0 and p==1 and (jj-b1)>50:
+            p=2
+            b2=jj
+        jj+=1
+    return a1,a2,a3,a4,b1,b2
 
 # returns arrays with number of pixels corresponding to a class and total number of pixels of the images containing that class
 def compute_class_frequencies(path,dim,card,ch):
@@ -174,61 +167,10 @@ def calc_weight(img, seg, av, freq, dim, band, ch):
                         h = 1
                         k = 1
                     l += 1
-                W[i, j] = av / freq[int(seg[i, j])] + 10 * math.exp(-((d1 + d2) ** 2) / (2 * band))
+                W[i, j] = 10 * math.exp(-((d1 + d2) ** 2) / (2 * band))
+            W[i, j] = W[i, j] + av / freq[int(seg[i, j])] 
     return W
 
-def categorical_and_weight(img,seg,av,freq,dim,band,ch):
-    cate=np.zeros((seg.shape[0],seg.shape[1],ch),dtype='float32')
-    W=np.zeros((seg.shape[0],seg.shape[1]),dtype='float32')
-    global_thresh = threshold_otsu(img)
-    binary_global = img > global_thresh # image to binary mask
-    binary_mask=binary_global==1.0
-    maximum_l = np.min( 3 * np.sqrt(band), seg.shape[0]-1 )
-    for i in range(seg.shape[0]):
-        for j in range(seg.shape[1]):
-            cate[i,j,int(seg[i,j])]=1.0 # convert a single mask with values 1..ch to an array
-            if (binary_mask[i,j]>0):
-                h=0
-                k=0
-                d1=0
-                d2=0
-                aa=seg[i,j]
-                l=1
-                while h!=1 or k!=1:
-                    # find a border with another patch
-                    if h==0: # point at [i+-l,j] or [i,j+-l] is neither 0 nor aa
-                        if (seg[max(i-l,0),j]!=aa and int(seg[max(i-l,0),j]!=0)):
-                            d1=l
-                            h=1
-                            bb=seg[i-l,j]
-                        if (seg[min(i+l,seg.shape[0]-1),j]!=aa and int(seg[min(i+l,seg.shape[0]-1),j])!=0):
-                            d1=l
-                            h=1
-                            bb=seg[min(i+l,seg.shape[0]-1),j]
-                        if (seg[i,max(j-l,0)]!=aa and int(seg[i,max(j-l,0)])!=0):
-                            d1=l
-                            h=1
-                            bb=seg[i,j-l]
-                        if (seg[i,min(j+l,seg.shape[0]-1)]!=aa and int(seg[i,min(j+l,seg.shape[0]-1)])!=0):
-                            d1=l
-                            h=1
-                            bb=seg[i,min(j+l,seg.shape[0]-1)]
-                    if h == 1 and k == 0 and ( # points at [i+-l, j] and [i, j+-l] are neither aa nor bb nor 0. Distance from another patch?
-                                (seg[max(i-l,0),j]!=aa and seg[max(i-l,0),j]!=bb and int(seg[max(i-l,0),j]!=0)) or
-                                (seg[min(i+l,seg.shape[0]-1),j]!=aa and seg[min(i+l,seg.shape[0]-1),j]!=bb and int(seg[min(i+l,seg.shape[0]-1),j])!=0) or
-                                (seg[i,max(j-l,0)]!=aa and seg[i,max(j-l,0)]!=bb and int(seg[i,max(j-l,0)])!=0) or
-                                (seg[i,min(j+l,seg.shape[0]-1)]!=aa and seg[i,min(j+l,seg.shape[0]-1)]!=bb and int(seg[i,min(j+l,seg.shape[0]-1)])!=0)
-                            ):
-                        d2=l
-                        k=1
-                    if l >= maximum_l: # l==seg.shape[0]-1:
-                        d1=seg.shape[0]
-                        h=1
-                        k=1
-                    l+=1
-                W[i,j]=av/freq[int(seg[i,j])]+10*math.exp(-((d1+d2)**2)/(2*band))
-    W=np.reshape(W,(dim,dim,1))
-    return np.concatenate([cate,W],axis=-1)
 
 def input_creation(path,card,dim,band,ch):
     '''
@@ -322,9 +264,9 @@ def input_creation_mem(image_list: list, mask_list: list, band: float):
 
     return output_data
 
-def common_input_process(LABELS_DICT, MODEL_RESOLUTION, MODEL_SIZE, trainingData, trainingOutputs):
-    inverse_label_dict = {v: k for k, v in LABELS_DICT.items()}
-    nlabels = len(LABELS_DICT)+1
+def common_input_process(inverse_label_dict, MODEL_RESOLUTION, MODEL_SIZE, trainingData, trainingOutputs):
+    # inverse_label_dict = {v: k for k, v in LABELS_DICT.items()}
+    nlabels = len(set(inverse_label_dict.values()))+1 # get the number of unique values in the inverse dict
     min_defined_rois = nlabels/2 # do not add to the training set if less than this number of ROIs are defined
     resolution = np.array(trainingData['resolution'])
     zoomFactor = resolution / MODEL_RESOLUTION
@@ -349,6 +291,57 @@ def common_input_process(LABELS_DICT, MODEL_RESOLUTION, MODEL_SIZE, trainingData
             image = skimage.morphology.area_opening(image, area_threshold=4)
             image = skimage.morphology.area_closing(image, area_threshold=4)
             image_list.append(padorcut(zoom(image, zoomFactor), MODEL_SIZE))
+
+    return image_list, mask_list
+
+def common_input_process_split(inverse_label_dict, MODEL_RESOLUTION, MODEL_SIZE, MODEL_SIZE_SPLIT, trainingData, trainingOutputs):
+    nlabels = len(set(inverse_label_dict.values()))+1 # get the number of unique values in the inverse dict
+    min_defined_rois = nlabels/2 # do not add to the training set if less than this number of ROIs are defined
+    resolution = np.array(trainingData['resolution'])
+    zoomFactor = resolution / MODEL_RESOLUTION
+
+    image_list = []
+    mask_list = []
+    for imageIndex in range(len(trainingData['image_list'])):
+        mask_dataset_left = np.zeros((MODEL_SIZE_SPLIT[0], MODEL_SIZE_SPLIT[1], nlabels))
+        mask_dataset_right = np.zeros((MODEL_SIZE_SPLIT[0], MODEL_SIZE_SPLIT[1], nlabels))
+        defined_rois = 0
+        for label, mask in trainingOutputs[imageIndex].items():
+            if np.sum(mask) > 5:
+                defined_rois += 1
+            else:
+                continue # avoid adding empty masks
+
+           
+        if defined_rois > min_defined_rois:
+            image = trainingData['image_list'][imageIndex]
+            image = skimage.morphology.area_opening(image, area_threshold=4)
+            image = skimage.morphology.area_closing(image, area_threshold=4)
+            image=padorcut(zoom(image, zoomFactor), MODEL_SIZE)
+            imgbc=biascorrection.biascorrection_image(image)
+            a1,a2,a3,a4,b1,b2=split_mirror(imgbc)
+            left=imgbc[int(b1):int(b2),int(a1):int(a2)]
+            left=padorcut(left, MODEL_SIZE_SPLIT)
+            right=imgbc[int(b1):int(b2),int(a3):int(a4)]
+            right=right[::1,::-1]
+            right=padorcut(right, MODEL_SIZE_SPLIT)
+
+            for label, mask in trainingOutputs[imageIndex].items():
+                mask = skimage.morphology.area_opening(mask, area_threshold=4)
+                mask = skimage.morphology.area_closing(mask, area_threshold=4)
+                mask = padorcut(zoom(mask, zoomFactor, order=0), MODEL_SIZE)
+                roileft=mask[int(b1):int(b2),int(a1):int(a2)]
+                roileft=padorcut(roileft, MODEL_SIZE_SPLIT)
+                roiright=mask[int(b1):int(b2),int(a3):int(a4)]
+                roiright=roiright[::1,::-1]
+                roiright=padorcut(roiright, MODEL_SIZE_SPLIT)
+                mask_dataset_left[:, :, int(inverse_label_dict[label])] = roileft
+                mask_dataset_right[:, :, int(inverse_label_dict[label])] = roiright
+
+            image_list.append(left)
+            mask_list.append(mask_dataset_left)
+            image_list.append(right)
+            mask_list.append(mask_dataset_right)
 
     return image_list, mask_list
 

@@ -9,9 +9,13 @@ from pathlib import Path
 
 from .interfaces import ModelProvider
 from .DynamicDLModel import DynamicDLModel
+from typing import Union, IO
+import os
+import datetime
 
 
-AVAILABLE_MODELS = ["Classifier", "Thigh", "Leg"]
+AVAILABLE_MODELS = ["Classifier", "Thigh", "Leg", "Thigh-Split", "Leg-Split"]
+OUTPUT_DATA_DIR = 'data_out'
 
 class LocalModelProvider(ModelProvider):
     
@@ -32,3 +36,11 @@ class LocalModelProvider(ModelProvider):
 
     def upload_model(self, modelName: str, model: DynamicDLModel):
         print("You are using the LocalModelProvider. Therefore no upload is done!")
+
+    def _upload_bytes(self, data: IO):
+        print("You are using the LocalModelProvider. Therefore no upload is done!")
+        os.makedirs(OUTPUT_DATA_DIR, exist_ok=True)
+        filename = datetime.datetime.now().strftime("%Y%m%d_%H%M%S.npz")
+        with open(os.path.join(OUTPUT_DATA_DIR, filename), 'wb') as f:
+            f.write(data.getbuffer())
+        print('File saved')

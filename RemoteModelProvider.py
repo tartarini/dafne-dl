@@ -6,9 +6,10 @@ import requests
 
 from .interfaces import ModelProvider
 from .DynamicDLModel import DynamicDLModel
+from typing import IO
 
 
-AVAILABLE_MODELS = ["Classifier", "Thigh", "Leg"]
+AVAILABLE_MODELS = ["Classifier", "Thigh", "Leg", "Thigh_Split", "Leg_Split"]
 
 
 def get_server_config():
@@ -118,3 +119,9 @@ class RemoteModelProvider(ModelProvider):
                                 "api_key": self.api_key})
         print(f"status code: {r.status_code}")
         print(f"message: {r.json()['message']}")
+
+    def _upload_bytes(self, data: IO):
+        # TODO implementation of data upload
+        # Note: the don't pass data directly to requests because the byte stream is not at the start.
+        # Use getbuffer or getvalue instead. See https://github.com/psf/requests/issues/2589
+        print("Data upload not yet implemented")
