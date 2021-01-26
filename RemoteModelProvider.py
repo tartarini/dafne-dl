@@ -11,14 +11,36 @@ from .DynamicDLModel import DynamicDLModel
 AVAILABLE_MODELS = ["Classifier", "Thigh", "Leg"]
 
 
+def get_server_config():
+    """
+    Load config.txt which should contain the keys "url_base" and "api_key" and be
+    located int the parent directory of this directory.
+    """
+    config_path = Path(__file__).parents[1] / "config.txt"
+    if not os.path.exists(config_path):
+        raise FileNotFoundError(f"Could not find config file: {config_path}")
+
+    with open(config_path, "r") as f:
+        lines = f.readlines()
+        lines = [l.strip() for l in lines if not l.startswith("#")]
+        config = {l.split("=")[0]: l.split("=")[1] for l in lines}
+
+    if "url_base" not in config.keys():
+        raise ValueError("config.txt is missing 'url_basel' entry.")
+    if "api_key" not in config.keys():
+        raise ValueError("config.txt is missing 'api_key' entry.")
+
+    return config
+
+
 class RemoteModelProvider(ModelProvider):
     
     def __init__(self, models_path):
         self.models_path = Path(models_path)
-
-        # todo: put this into a config file
-        self.url_base = 'http://localhost:5000/'
-        self.api_key = "abc123"
+        config = get_server_config()
+        self.url_base = config["url_base"]
+        self.api_key = config["api_key"]
+        print(f"Config: {config}")
 
     def load_model(self, modelName: str) -> DynamicDLModel:
         """
