@@ -64,7 +64,9 @@ class RemoteModelProvider(ModelProvider):
                                 "timestamp": latest_timestamp,
                                 "api_key": self.api_key},
                           stream=True)
+        success = False
         if r.ok:
+            success = True
             total_size_in_bytes = int(r.headers.get('content-length', 0))
             print("Size to download:", total_size_in_bytes)
             block_size = 1024*1024  # 1 kB
@@ -77,6 +79,12 @@ class RemoteModelProvider(ModelProvider):
                         progress_callback(current_size, total_size_in_bytes)
                     file.write(data)
 
+            if current_size != total_size_in_bytes:
+                print("Download interrupted!")
+                os.remove(latest_model_path)
+                success = False
+
+        if success:
             model = DynamicDLModel.Load(open(latest_model_path, "rb"))
 
             # Deleting older models
