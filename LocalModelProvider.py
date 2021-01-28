@@ -12,6 +12,7 @@ from .DynamicDLModel import DynamicDLModel
 from typing import Union, IO
 import os
 import datetime
+from typing import Callable
 
 
 AVAILABLE_MODELS = ["Classifier", "Thigh", "Leg", "Thigh-Split", "Leg-Split"]
@@ -22,7 +23,7 @@ class LocalModelProvider(ModelProvider):
     def __init__(self, models_path):
         self.models_path = Path(models_path)
         
-    def load_model(self, modelName: str) -> DynamicDLModel:
+    def load_model(self, modelName: str, progress_callback: Callable[[int, int], None] = None) -> DynamicDLModel:
         print(f"Loading model: {modelName}")
         model_file = list(self.models_path.glob(f"{modelName}_*.model"))
         if len(model_file) == 0:

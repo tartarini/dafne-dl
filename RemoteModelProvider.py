@@ -9,39 +9,7 @@ from .DynamicDLModel import DynamicDLModel
 from typing import IO, Callable
 
 
-def get_server_config():
-    """
-    Load config.txt which should contain the keys "url_base" and "api_key" and be
-    located int the parent directory of this directory.
-    """
-    config_path = Path(__file__).parents[1] / "config.txt"
-    if not os.path.exists(config_path):
-        raise FileNotFoundError(f"Could not find config file: {config_path}")
-
-    with open(config_path, "r") as f:
-        lines = f.readlines()
-        lines = [l.strip() for l in lines if not l.startswith("#")]
-        config = {l.split("=")[0]: l.split("=")[1] for l in lines}
-
-    if "url_base" not in config.keys():
-        raise ValueError("config.txt is missing 'url_base' entry.")
-    if "api_key" not in config.keys():
-        raise ValueError("config.txt is missing 'api_key' entry.")
-
-    return config
-
-
-# Try loading the config from the dafne environment.
-try:
-    from config import GlobalConfig
-except:
-    # if it doesn't work, resort to the config.txt file
-    config_local = get_server_config()
-    GlobalConfig = {'SERVER_URL': config_local['url_base'], 'API_KEY': config_local['api_key']}
-
-
-
-AVAILABLE_MODELS = ["Classifier", "Thigh", "Leg", "Thigh_Split", "Leg_Split"]
+AVAILABLE_MODELS = ["Classifier", "Thigh", "Leg", "Thigh-Split", "Leg-Split"]
 
 
 
@@ -51,9 +19,10 @@ class RemoteModelProvider(ModelProvider):
         self.models_path = Path(models_path)
         self.url_base = url_base
         self.api_key = api_key
+        os.makedirs(self.models_path, exist_ok=True)
         print(f"Config: {self.url_base}, {self.api_key}")
 
-    def load_model(self, modelName: str,) -> DynamicDLModel:
+    def load_model(self, modelName: str, progress_callback: Callable[[int, int], None] = None) -> DynamicDLModel:
         """
         Load latest model from remote server if it does not already exist locally.
 
@@ -74,7 +43,10 @@ class RemoteModelProvider(ModelProvider):
         else:
             print("ERROR: Request to server failed")
             print(f"status code: {r.status_code}")
-            print(f"message: {r.json()['message']}")
+            try:
+                print(f"message: {r.json()['message']}")
+            except:
+                pass
             return None
 
         # Check if model already exists locally
@@ -90,10 +62,22 @@ class RemoteModelProvider(ModelProvider):
         r = requests.post(self.url_base + "get_model",
                           json={"model_type": modelName,
                                 "timestamp": latest_timestamp,
-                                "api_key": self.api_key})
+                                "api_key": self.api_key},
+                          stream=True)
         if r.ok:
-            model = DynamicDLModel.Loads(r.content)
-            model.dump(open(latest_model_path, "wb"))
+            total_size_in_bytes = int(r.headers.get('content-length', 0))
+            print("Size to download:", total_size_in_bytes)
+            block_size = 1024*1024  # 1 kB
+            current_size = 0
+            with open(latest_model_path, 'wb') as file:
+                for data in r.iter_content(block_size):
+                    current_size += len(data)
+                    #print(current_size)
+                    if progress_callback is not None:
+                        progress_callback(current_size, total_size_in_bytes)
+                    file.write(data)
+
+            model = DynamicDLModel.Load(open(latest_model_path, "rb"))
 
             # Deleting older models
             old_models = self.models_path.glob(f"{modelName}_*.model")
@@ -107,7 +91,10 @@ class RemoteModelProvider(ModelProvider):
         else:
             print("ERROR: Request to server failed")
             print(f"status code: {r.status_code}")
-            print(f"message: {r.json()['message']}")
+            try:
+                print(f"message: {r.json()['message']}")
+            except:
+                pass
             return None
     
     def available_models(self) -> str:

@@ -8,7 +8,7 @@ Created on Thu Oct 15 19:25:52 2020
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from io import BytesIO
-from typing import IO, Union
+from typing import IO, Callable
 import numpy as np
 
 
@@ -120,13 +120,15 @@ class ModelProvider(ABC):
     """
     
     @abstractmethod
-    def load_model(self, model_name: str) -> DeepLearningClass:
+    def load_model(self, model_name: str, progress_callback: Callable[[int, int], None] = None) -> DeepLearningClass:
         """
 
         Parameters
         ----------
         model_name : str
             The name of the model to load.
+        progress_callback: Callable[[int, int], None] (optional)
+            Callback function for progress
 
         Returns
         -------
