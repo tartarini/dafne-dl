@@ -6,10 +6,7 @@ import requests
 
 from .interfaces import ModelProvider
 from .DynamicDLModel import DynamicDLModel
-from typing import IO
-
-
-AVAILABLE_MODELS = ["Classifier", "Thigh", "Leg", "Thigh_Split", "Leg_Split"]
+from typing import IO, Callable
 
 
 def get_server_config():
@@ -27,23 +24,36 @@ def get_server_config():
         config = {l.split("=")[0]: l.split("=")[1] for l in lines}
 
     if "url_base" not in config.keys():
-        raise ValueError("config.txt is missing 'url_basel' entry.")
+        raise ValueError("config.txt is missing 'url_base' entry.")
     if "api_key" not in config.keys():
         raise ValueError("config.txt is missing 'api_key' entry.")
 
     return config
 
 
+# Try loading the config from the dafne environment.
+try:
+    from config import GlobalConfig
+except:
+    # if it doesn't work, resort to the config.txt file
+    config_local = get_server_config()
+    GlobalConfig = {'SERVER_URL': config_local['url_base'], 'API_KEY': config_local['api_key']}
+
+
+
+AVAILABLE_MODELS = ["Classifier", "Thigh", "Leg", "Thigh_Split", "Leg_Split"]
+
+
+
 class RemoteModelProvider(ModelProvider):
     
-    def __init__(self, models_path):
+    def __init__(self, models_path, url_base, api_key):
         self.models_path = Path(models_path)
-        config = get_server_config()
-        self.url_base = config["url_base"]
-        self.api_key = config["api_key"]
-        print(f"Config: {config}")
+        self.url_base = url_base
+        self.api_key = api_key
+        print(f"Config: {self.url_base}, {self.api_key}")
 
-    def load_model(self, modelName: str) -> DynamicDLModel:
+    def load_model(self, modelName: str,) -> DynamicDLModel:
         """
         Load latest model from remote server if it does not already exist locally.
 
@@ -101,7 +111,8 @@ class RemoteModelProvider(ModelProvider):
             return None
     
     def available_models(self) -> str:
-        return AVAILABLE_MODELS
+        # TODO: if api_key is invalid return None
+        return AVAILABLE_MODELS[:]
 
     def upload_model(self, modelName: str, model: DynamicDLModel):
         """

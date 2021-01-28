@@ -32,7 +32,7 @@ class LocalModelProvider(ModelProvider):
         return DynamicDLModel.Load(open(model_file[0], 'rb'))
     
     def available_models(self) -> str:
-        return AVAILABLE_MODELS
+        return AVAILABLE_MODELS[:]
 
     def upload_model(self, modelName: str, model: DynamicDLModel):
         print("You are using the LocalModelProvider. Therefore no upload is done!")
