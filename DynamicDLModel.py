@@ -12,12 +12,44 @@ from .interfaces import IncompatibleModelError, DeepLearningClass
 import dill
 from io import BytesIO
 import numpy as np
+import inspect
+
+
+def fn_to_source(function):
+    """
+    Given a function, returns it source. If the source cannot be retrieved, return the object itself
+    """
+    print('Converting fn to source')
+    try:
+        return inspect.getsource(function)
+    except OSError:
+        print('Conversion failed!')
+        return function # the source cannot be retrieved, return the object itself
+
+
+def source_to_fn(source):
+    """
+    Given a source, return the (first) defined function. If the source is not a string, return the object itself
+    """
+    if type(source) is not str:
+        return source
+    locs = {}
+    globs = {}
+    exec(source, globs, locs)
+    for k,v in locs.items():
+        if callable(v):
+            print('source_to_fn. Found function', k)
+            return v
+    return None
+
 
 def default_keras_weights_to_model_function(modelObj: DynamicDLModel, weights):
     modelObj.model.set_weights(weights)
-    
+
+
 def default_keras_model_to_weights_function(modelObj: DynamicDLModel):
     return modelObj.model.get_weights()
+
 
 def default_keras_delta_function(lhs: DynamicDLModel, rhs: DynamicDLModel, threshold=None):
     if lhs.model_id != rhs.model_id: raise IncompatibleModelError
@@ -33,6 +65,7 @@ def default_keras_delta_function(lhs: DynamicDLModel, rhs: DynamicDLModel, thres
     outputObj.set_weights(newWeights)
     return outputObj
 
+
 def default_keras_apply_delta_function(lhs: DynamicDLModel, rhs: DynamicDLModel):
     if lhs.model_id != rhs.model_id: raise IncompatibleModelError
     lhs_weights = lhs.get_weights()
@@ -44,11 +77,13 @@ def default_keras_apply_delta_function(lhs: DynamicDLModel, rhs: DynamicDLModel)
     outputObj.set_weights(newWeights)
     return outputObj
 
+
 def default_keras_weight_copy_function(weights_in):
     weights_out = []
     for layer in weights_in:
         weights_out.append(layer.copy())
     return weights_out
+
 
 class DynamicDLModel(DeepLearningClass):
     """
@@ -137,13 +172,13 @@ class DynamicDLModel(DeepLearningClass):
         """
         outputDict = {
             'model_id': self.model_id,
-            'init_model_function': self.init_model_function,
-            'apply_model_function': self.apply_model_function,
-            'weights_to_model_function': self.weights_to_model_function,
-            'model_to_weights_function': self.model_to_weights_function,
-            'calc_delta_function': self.calc_delta_function,
-            'apply_delta_function': self.apply_delta_function,
-            'incremental_learn_function': self.incremental_learn_function,
+            'init_model_function': fn_to_source(self.init_model_function),
+            'apply_model_function': fn_to_source(self.apply_model_function),
+            'weights_to_model_function': fn_to_source(self.weights_to_model_function),
+            'model_to_weights_function': fn_to_source(self.model_to_weights_function),
+            'calc_delta_function': fn_to_source(self.calc_delta_function),
+            'apply_delta_function': fn_to_source(self.apply_delta_function),
+            'incremental_learn_function': fn_to_source(self.incremental_learn_function),
             'weights': self.get_weights(),
             "timestamp_id": self.timestamp_id
             }
@@ -203,6 +238,9 @@ class DynamicDLModel(DeepLearningClass):
         """
         
         inputDict = dill.load(file)
+        for k,v in inputDict.items():
+            if '_function' in k:
+                inputDict[k] = source_to_fn(v) # convert the functions from source
         outputObj = DynamicDLModel(**inputDict)
         return outputObj
         
