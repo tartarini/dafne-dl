@@ -6,10 +6,7 @@ import requests
 
 from .interfaces import ModelProvider
 from .DynamicDLModel import DynamicDLModel
-from typing import IO, Callable
-
-
-AVAILABLE_MODELS = ["Classifier", "Thigh", "Leg", "Thigh-Split", "Leg-Split"]
+from typing import IO, Callable, List, Union
 
 
 
@@ -105,9 +102,16 @@ class RemoteModelProvider(ModelProvider):
                 pass
             return None
     
-    def available_models(self) -> str:
-        # TODO: if api_key is invalid return None
-        return AVAILABLE_MODELS[:]
+    def available_models(self) -> Union[None, List[str]]:
+        r = requests.post(self.url_base + "get_available_models",
+                          json={"api_key": self.api_key})
+        if r.ok:
+            models = r.json()['models']
+            return models
+        else:
+            print(f"status code: {r.status_code}")
+            print(f"message: {r.json()['message']}")
+            return None
 
     def upload_model(self, modelName: str, model: DynamicDLModel):
         """
