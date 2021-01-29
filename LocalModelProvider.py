@@ -18,6 +18,7 @@ from typing import Callable
 AVAILABLE_MODELS = ["Classifier", "Thigh", "Leg", "Thigh-Split", "Leg-Split"]
 OUTPUT_DATA_DIR = 'data_out'
 
+
 class LocalModelProvider(ModelProvider):
     
     def __init__(self, models_path):

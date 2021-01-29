@@ -66,7 +66,7 @@ class RemoteModelProvider(ModelProvider):
             success = True
             total_size_in_bytes = int(r.headers.get('content-length', 0))
             print("Size to download:", total_size_in_bytes)
-            block_size = 1024*1024  # 1 kB
+            block_size = 1024*1024  # 1 MB
             current_size = 0
             with open(latest_model_path, 'wb') as file:
                 for data in r.iter_content(block_size):
@@ -75,6 +75,8 @@ class RemoteModelProvider(ModelProvider):
                     if progress_callback is not None:
                         progress_callback(current_size, total_size_in_bytes)
                     file.write(data)
+
+            print("Downloaded size", current_size)
 
             if current_size != total_size_in_bytes:
                 print("Download interrupted!")
@@ -110,7 +112,10 @@ class RemoteModelProvider(ModelProvider):
             return models
         else:
             print(f"status code: {r.status_code}")
-            print(f"message: {r.json()['message']}")
+            try:
+                print(f"message: {r.json()['message']}")
+            except:
+                pass
             if r.status_code == 401:
                 raise PermissionError("Your api_key is invalid.")
             return None

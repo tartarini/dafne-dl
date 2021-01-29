@@ -20,6 +20,7 @@ def fn_to_source(function):
     Given a function, returns it source. If the source cannot be retrieved, return the object itself
     """
     print('Converting fn to source')
+    if function is None: return None
     try:
         return inspect.getsource(function)
     except OSError:
