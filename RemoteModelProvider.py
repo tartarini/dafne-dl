@@ -111,6 +111,8 @@ class RemoteModelProvider(ModelProvider):
         else:
             print(f"status code: {r.status_code}")
             print(f"message: {r.json()['message']}")
+            if r.status_code == 401:
+                raise PermissionError("Your api_key is invalid.")
             return None
 
     def upload_model(self, modelName: str, model: DynamicDLModel):
