@@ -138,7 +138,7 @@ class ModelProvider(ABC):
         pass
 
     @abstractmethod
-    def upload_model(self, model_name: str, model: DeepLearningClass):
+    def upload_model(self, model_name: str, model: DeepLearningClass, dice_score: float=0.0):
         """
         Parameters
         ----------
@@ -146,6 +146,8 @@ class ModelProvider(ABC):
             The name of the model to upload.
         model:
             The model to be uploaded
+        dice_score:
+            The average dice score of the client
         """
         pass
 

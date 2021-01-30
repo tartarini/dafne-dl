@@ -7,7 +7,35 @@ import requests
 from .interfaces import ModelProvider
 from .DynamicDLModel import DynamicDLModel
 from typing import IO, Callable, List, Union
+import multiprocessing
+import time
 
+MODEL_TEMP_DIR = 'models_temp'
+UPLOAD_RETRIES = 3
+TIME_BETWEEN_RETRIES = 10
+os.makedirs(MODEL_TEMP_DIR, exist_ok=True)
+
+def upload_model(url_base, filename, modelName, api_key, dice):
+    for retries in range(UPLOAD_RETRIES):
+        print(f"Sending {filename}")
+        files = {'model_binary': open(filename, 'rb')}
+        r = requests.post(url_base + "upload_model",
+                          files=files,
+                          data={"model_type": modelName,
+                                "api_key": api_key,
+                                "dice": dice})
+        print(f"status code: {r.status_code}")
+        try:
+            print(f"message: {r.json()['message']}")
+        except:
+            pass
+
+        if r.status_code == 200:
+            print("upload successful") # success
+            break
+        print('Upload error')
+        time.sleep(TIME_BETWEEN_RETRIES)
+    os.remove(filename)
 
 
 class RemoteModelProvider(ModelProvider):
@@ -120,7 +148,7 @@ class RemoteModelProvider(ModelProvider):
                 raise PermissionError("Your api_key is invalid.")
             return None
 
-    def upload_model(self, modelName: str, model: DynamicDLModel):
+    def upload_model(self, modelName: str, model: DynamicDLModel, dice_score: float = 0.0):
         """
         Upload model to server
         
@@ -129,16 +157,11 @@ class RemoteModelProvider(ModelProvider):
             model: DynamicDLModel
         """
         print("Uploading model...")
-        files = {'model_binary': model.dumps()}
-        r = requests.post(self.url_base + "upload_model",
-                          files=files,
-                          data={"model_type": modelName,
-                                "api_key": self.api_key})
-        print(f"status code: {r.status_code}")
-        try:
-            print(f"message: {r.json()['message']}")
-        except:
-            pass
+        filename_out = os.path.join(MODEL_TEMP_DIR, f'{modelName}_{str(int(time.time()))}.model')
+        model.dump(open(filename_out, 'wb'))
+        upload_process = multiprocessing.Process(target=upload_model, args=(self.url_base, filename_out, modelName,
+                                                                            self.api_key, dice_score))
+        upload_process.start()
 
     def _upload_bytes(self, data: IO):
         # TODO implementation of data upload

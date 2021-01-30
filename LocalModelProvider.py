@@ -36,7 +36,7 @@ class LocalModelProvider(ModelProvider):
     def available_models(self) -> str:
         return AVAILABLE_MODELS[:]
 
-    def upload_model(self, modelName: str, model: DynamicDLModel):
+    def upload_model(self, modelName: str, model: DynamicDLModel, dice_score: float=0.0):
         print("You are using the LocalModelProvider. Therefore no upload is done!")
 
     def _upload_bytes(self, data: IO):
