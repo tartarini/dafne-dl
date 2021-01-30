@@ -14,7 +14,6 @@ from io import BytesIO
 import numpy as np
 import inspect
 
-
 def fn_to_source(function):
     """
     Given a function, returns it source. If the source cannot be retrieved, return the object itself
@@ -25,7 +24,14 @@ def fn_to_source(function):
         return inspect.getsource(function)
     except OSError:
         print('Conversion failed!')
-        return function # the source cannot be retrieved, return the object itself
+        try:
+            src = function.source
+            print('Returning embedded source')
+            return src
+        except:
+            pass
+    print('Returning bytecode')
+    return function # the source cannot be retrieved, return the object itself
 
 
 def source_to_fn(source):
@@ -33,13 +39,16 @@ def source_to_fn(source):
     Given a source, return the (first) defined function. If the source is not a string, return the object itself
     """
     if type(source) is not str:
+        print("source to fn: source is not a string")
         return source
+    print("source to fn: source is string")
     locs = {}
     globs = {}
     exec(source, globs, locs)
     for k,v in locs.items():
         if callable(v):
             print('source_to_fn. Found function', k)
+            v.source = source
             return v
     return None
 
@@ -87,6 +96,7 @@ def default_keras_weight_copy_function(weights_in):
 
 
 class DynamicDLModel(DeepLearningClass):
+
     """
     Class to represent a deep learning model that can be serialized/deserialized
     """
@@ -104,13 +114,45 @@ class DynamicDLModel(DeepLearningClass):
         self.model = None
         self.model_id = model_id
         self.init_model_function = init_model_function
+        src = fn_to_source(init_model_function)
+        if type(src) == str:
+            self.init_model_function.source = src
+
         self.weights_to_model_function = weights_to_model_function
+        src = fn_to_source(weights_to_model_function)
+        if type(src) == str:
+            self.weights_to_model_function.source = src
+
         self.model_to_weights_function = model_to_weights_function
+        src = fn_to_source(model_to_weights_function)
+        if type(src) == str:
+            self.model_to_weights_function.source = src
+
         self.apply_model_function = apply_model_function
+        src = fn_to_source(apply_model_function)
+        if type(src) == str:
+            self.apply_model_function.source = src
+
         self.calc_delta_function = calc_delta_function
+        src = fn_to_source(calc_delta_function)
+        if type(src) == str:
+            self.calc_delta_function.source = src
+
         self.apply_delta_function = apply_delta_function
+        src = fn_to_source(apply_delta_function)
+        if type(src) == str:
+            self.apply_delta_function.source = src
+
         self.incremental_learn_function = incremental_learn_function
+        src = fn_to_source(incremental_learn_function)
+        if type(src) == str:
+            self.incremental_learn_function.source = src
+
         self.weight_copy_function = weight_copy_function
+        src = fn_to_source(weight_copy_function)
+        if type(src) == str:
+            self.weight_copy_function.source = src
+
         self.init_model() # initializes the model
         self.timestamp_id = timestamp_id  # unique timestamp id; used to identify model versions during federated learning
         if weights: self.set_weights(weights)

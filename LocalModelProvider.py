@@ -15,7 +15,7 @@ import datetime
 from typing import Callable
 
 
-AVAILABLE_MODELS = ["Classifier", "Thigh", "Leg", "Thigh-Split", "Leg-Split"]
+AVAILABLE_MODELS = ["Classifier", "Thigh", "Leg"]
 OUTPUT_DATA_DIR = 'data_out'
 
 

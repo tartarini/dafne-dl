@@ -135,7 +135,10 @@ class RemoteModelProvider(ModelProvider):
                           data={"model_type": modelName,
                                 "api_key": self.api_key})
         print(f"status code: {r.status_code}")
-        print(f"message: {r.json()['message']}")
+        try:
+            print(f"message: {r.json()['message']}")
+        except:
+            pass
 
     def _upload_bytes(self, data: IO):
         # TODO implementation of data upload
