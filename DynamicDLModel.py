@@ -75,6 +75,7 @@ def default_keras_delta_function(lhs: DynamicDLModel, rhs: DynamicDLModel, thres
         newWeights.append(delta)
     outputObj = lhs.get_empty_copy()
     outputObj.set_weights(newWeights)
+    outputObj.is_delta = True
     return outputObj
 
 
@@ -231,7 +232,8 @@ class DynamicDLModel(DeepLearningClass):
         outputDict = {
             'model_id': self.model_id,
             'weights': self.get_weights(),
-            'timestamp_id': self.timestamp_id
+            'timestamp_id': self.timestamp_id,
+            'is_delta': self.is_delta
             }
 
         # add the internal functions to the dictionary
@@ -255,7 +257,8 @@ class DynamicDLModel(DeepLearningClass):
             Output copy
 
         """
-        new_model = DynamicDLModel(self.model_id, self.init_model_function, self.apply_model_function, weights=None, timestamp_id=self.timestamp_id)
+        new_model = DynamicDLModel(self.model_id, self.init_model_function, self.apply_model_function,
+                                   weights=None, timestamp_id=self.timestamp_id, is_delta=self.is_delta)
         for fn_name in self.function_mappings:
             new_model.set_internal_fn(fn_name, getattr(self, fn_name))
         return new_model
