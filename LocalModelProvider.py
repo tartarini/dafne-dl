@@ -13,6 +13,7 @@ from typing import Union, IO
 import os
 import datetime
 from typing import Callable
+import glob
 
 
 AVAILABLE_MODELS = ["Classifier", "Thigh", "Leg"]
@@ -23,18 +24,19 @@ class LocalModelProvider(ModelProvider):
     
     def __init__(self, models_path):
         self.models_path = Path(models_path)
-        
+        model_list = glob.glob(os.path.join(models_path, '*.model'))
+        model_names = list(set([os.path.basename(s).split(_)[0] for s in model_list])) # get the name of the model, which is the part of the file before the '_'
+        self.model_names = list(filter(None, model_names)) # remove any empty names
+
     def load_model(self, modelName: str, progress_callback: Callable[[int, int], None] = None) -> DynamicDLModel:
         print(f"Loading model: {modelName}")
-        model_file = list(self.models_path.glob(f"{modelName}_*.model"))
+        model_file = sorted(list(self.models_path.glob(f"{modelName}_*.model")))
         if len(model_file) == 0:
             raise FileNotFoundError("Could not find model file.")
-        if len(model_file) > 1:
-            raise ValueError(f"More than one '{modelName}' model found.")
-        return DynamicDLModel.Load(open(model_file[0], 'rb'))
+        return DynamicDLModel.Load(open(model_file[-1], 'rb'))
     
     def available_models(self) -> str:
-        return AVAILABLE_MODELS[:]
+        return self.model_names[:]
 
     def upload_model(self, modelName: str, model: DynamicDLModel, dice_score: float=0.0):
         print("You are using the LocalModelProvider. Therefore no upload is done!")

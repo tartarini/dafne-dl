@@ -9,8 +9,9 @@ from .DynamicDLModel import DynamicDLModel
 from typing import IO, Callable, List, Union
 import multiprocessing
 import time
+from config import GlobalConfig
 
-MODEL_TEMP_DIR = 'models_temp'
+MODEL_TEMP_DIR = GlobalConfig['MODEL_TEMP_UPLOAD_DIR']
 UPLOAD_RETRIES = 3
 TIME_BETWEEN_RETRIES = 10
 os.makedirs(MODEL_TEMP_DIR, exist_ok=True)

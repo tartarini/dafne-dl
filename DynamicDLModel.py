@@ -13,24 +13,25 @@ import dill
 from io import BytesIO
 import numpy as np
 import inspect
+import time
 
 def fn_to_source(function):
     """
     Given a function, returns it source. If the source cannot be retrieved, return the object itself
     """
-    print('Converting fn to source')
+    #print('Converting fn to source')
     if function is None: return None
     try:
         return inspect.getsource(function)
     except OSError:
-        print('Conversion failed!')
+        #print('Conversion failed!')
         try:
             src = function.source
-            print('Returning embedded source')
+            #print('Returning embedded source')
             return src
         except:
             pass
-    print('Returning bytecode')
+    print('Getting source failed - Returning bytecode')
     return function # the source cannot be retrieved, return the object itself
 
 
@@ -41,13 +42,13 @@ def source_to_fn(source):
     if type(source) is not str:
         print("source to fn: source is not a string")
         return source
-    print("source to fn: source is string")
+    #print("source to fn: source is string")
     locs = {}
     globs = {}
     exec(source, globs, locs)
     for k,v in locs.items():
         if callable(v):
-            print('source_to_fn. Found function', k)
+            #print('source_to_fn. Found function', k)
             v.source = source
             return v
     return None
@@ -62,6 +63,7 @@ def default_keras_model_to_weights_function(modelObj: DynamicDLModel):
 
 
 def default_keras_delta_function(lhs: DynamicDLModel, rhs: DynamicDLModel, threshold=None):
+    from dl.interfaces import IncompatibleModelError
     if lhs.model_id != rhs.model_id: raise IncompatibleModelError
     lhs_weights = lhs.get_weights()
     rhs_weights = rhs.get_weights()
@@ -76,13 +78,26 @@ def default_keras_delta_function(lhs: DynamicDLModel, rhs: DynamicDLModel, thres
     return outputObj
 
 
-def default_keras_apply_delta_function(lhs: DynamicDLModel, rhs: DynamicDLModel):
+def default_keras_add_weights_function(lhs: DynamicDLModel, rhs: DynamicDLModel):
+    from dl.interfaces import IncompatibleModelError
     if lhs.model_id != rhs.model_id: raise IncompatibleModelError
     lhs_weights = lhs.get_weights()
     rhs_weights = rhs.get_weights()
     newWeights = []
     for depth in range(len(lhs_weights)):
         newWeights.append(lhs_weights[depth] + rhs_weights[depth])
+    outputObj = lhs.get_empty_copy()
+    outputObj.set_weights(newWeights)
+    return outputObj
+
+
+def default_keras_multiply_function(lhs: DynamicDLModel, rhs: float):
+    if not isinstance(rhs, (int, float)):
+        raise NotImplementedError('Incompatible types for multiplication (only multiplication by numeric factor is allowed)')
+    lhs_weights = lhs.get_weights()
+    newWeights = []
+    for depth in range(len(lhs_weights)):
+        newWeights.append(lhs_weights[depth] * rhs)
     outputObj = lhs.get_empty_copy()
     outputObj.set_weights(newWeights)
     return outputObj
@@ -100,63 +115,60 @@ class DynamicDLModel(DeepLearningClass):
     """
     Class to represent a deep learning model that can be serialized/deserialized
     """
-    def __init__(self, model_id, # a unique ID to avoid mixing different models
-                 init_model_function, # inits the model. Accepts no parameters and returns the model
-                 apply_model_function, # function that applies the model. Has the object, and image, and a sequence containing resolutions as parameters
-                 weights_to_model_function = default_keras_weights_to_model_function, # put model weights inside the model.
-                 model_to_weights_function = default_keras_model_to_weights_function, # get the weights from the model in a pickable format
-                 calc_delta_function = default_keras_delta_function, # calculate the weight delta
-                 apply_delta_function = default_keras_apply_delta_function, # apply a weight delta
-                 weight_copy_function = default_keras_weight_copy_function, # create a deep copy of weights
-                 incremental_learn_function = None, # function to perform an incremental learning step
-                 weights = None, # initial weights
-                 timestamp_id = None): 
+    def __init__(self, model_id,  # a unique ID to avoid mixing different models
+                 init_model_function,  # inits the model. Accepts no parameters and returns the model
+                 apply_model_function,  # function that applies the model. Has the object, and image, and a sequence containing resolutions as parameters
+                 weights_to_model_function = default_keras_weights_to_model_function,  # put model weights inside the model.
+                 model_to_weights_function = default_keras_model_to_weights_function,  # get the weights from the model in a pickable format
+                 calc_delta_function = default_keras_delta_function,  # calculate the weight delta
+                 apply_delta_function = default_keras_add_weights_function,  # apply a weight delta
+                 weight_copy_function = default_keras_weight_copy_function,  # create a deep copy of weights
+                 factor_multiply_function = default_keras_multiply_function,
+                 incremental_learn_function = None,  # function to perform an incremental learning step
+                 weights = None,  # initial weights
+                 timestamp_id = None,
+                 is_delta = False):
         self.model = None
         self.model_id = model_id
-        self.init_model_function = init_model_function
-        src = fn_to_source(init_model_function)
-        if type(src) == str:
-            self.init_model_function.source = src
+        self.is_delta = is_delta
 
-        self.weights_to_model_function = weights_to_model_function
-        src = fn_to_source(weights_to_model_function)
-        if type(src) == str:
-            self.weights_to_model_function.source = src
+        self.function_mappings = [
+            'init_model_function',
+            'apply_model_function',
+            'weights_to_model_function',
+            'model_to_weights_function',
+            'calc_delta_function',
+            'apply_delta_function',
+            'weight_copy_function',
+            'factor_multiply_function',
+            'incremental_learn_function',
+        ]
 
-        self.model_to_weights_function = model_to_weights_function
-        src = fn_to_source(model_to_weights_function)
-        if type(src) == str:
-            self.model_to_weights_function.source = src
+        # the following sets the internal attributes self.fn = fn, with additionally adding the source to the function
+        for fn_name in self.function_mappings:
+            self.set_internal_fn(fn_name, locals()[fn_name])
 
-        self.apply_model_function = apply_model_function
-        src = fn_to_source(apply_model_function)
-        if type(src) == str:
-            self.apply_model_function.source = src
-
-        self.calc_delta_function = calc_delta_function
-        src = fn_to_source(calc_delta_function)
-        if type(src) == str:
-            self.calc_delta_function.source = src
-
-        self.apply_delta_function = apply_delta_function
-        src = fn_to_source(apply_delta_function)
-        if type(src) == str:
-            self.apply_delta_function.source = src
-
-        self.incremental_learn_function = incremental_learn_function
-        src = fn_to_source(incremental_learn_function)
-        if type(src) == str:
-            self.incremental_learn_function.source = src
-
-        self.weight_copy_function = weight_copy_function
-        src = fn_to_source(weight_copy_function)
-        if type(src) == str:
-            self.weight_copy_function.source = src
 
         self.init_model() # initializes the model
-        self.timestamp_id = timestamp_id  # unique timestamp id; used to identify model versions during federated learning
+        if timestamp_id is None:
+            self.reset_timestamp()
+        else:
+            self.timestamp_id = timestamp_id  # unique timestamp id; used to identify model versions during federated learning
+
         if weights: self.set_weights(weights)
-        
+
+    def reset_timestamp(self):
+        self.timestamp_id = int(time.time())
+
+    def set_internal_fn(self, internal_name, obj):
+        #print('Setting', internal_name)
+        if callable(obj):
+            src = fn_to_source(obj)
+            if type(src) == str:
+                obj.source = src
+
+        setattr(self, internal_name, obj)
+
     def init_model(self):
         """
         Initializes the internal model
@@ -195,6 +207,9 @@ class DynamicDLModel(DeepLearningClass):
     
     def apply(self, data):
         return self.apply_model_function(self, data)
+
+    def factor_multiply(self, factor: float):
+        return self.factor_multiply_function(self, factor)
     
     def incremental_learn(self, trainingData, trainingOutputs, bs=5, minTrainImages=5):
         self.incremental_learn_function(self, trainingData, trainingOutputs, bs, minTrainImages)
@@ -215,17 +230,14 @@ class DynamicDLModel(DeepLearningClass):
         """
         outputDict = {
             'model_id': self.model_id,
-            'init_model_function': fn_to_source(self.init_model_function),
-            'apply_model_function': fn_to_source(self.apply_model_function),
-            'weights_to_model_function': fn_to_source(self.weights_to_model_function),
-            'model_to_weights_function': fn_to_source(self.model_to_weights_function),
-            'calc_delta_function': fn_to_source(self.calc_delta_function),
-            'apply_delta_function': fn_to_source(self.apply_delta_function),
-            'incremental_learn_function': fn_to_source(self.incremental_learn_function),
             'weights': self.get_weights(),
-            "timestamp_id": self.timestamp_id
+            'timestamp_id': self.timestamp_id
             }
-        
+
+        # add the internal functions to the dictionary
+        for fn_name in self.function_mappings:
+            outputDict[fn_name] = fn_to_source(getattr(self, fn_name))
+
         dill.dump(outputDict, file)
     
     def dumps(self) -> bytes:
@@ -243,11 +255,10 @@ class DynamicDLModel(DeepLearningClass):
             Output copy
 
         """
-        return DynamicDLModel(self.model_id, self.init_model_function, self.apply_model_function,
-                              self.weights_to_model_function, self.model_to_weights_function,
-                              self.calc_delta_function, self.apply_delta_function, 
-                              self.weight_copy_function, self.incremental_learn_function, 
-                              None, self.timestamp_id)
+        new_model = DynamicDLModel(self.model_id, self.init_model_function, self.apply_model_function, weights=None, timestamp_id=self.timestamp_id)
+        for fn_name in self.function_mappings:
+            new_model.set_internal_fn(fn_name, getattr(self, fn_name))
+        return new_model
 
     def copy(self) -> DynamicDLModel:
         """
@@ -284,6 +295,8 @@ class DynamicDLModel(DeepLearningClass):
         for k,v in inputDict.items():
             if '_function' in k:
                 inputDict[k] = source_to_fn(v) # convert the functions from source
+
+        #print(inputDict)
         outputObj = DynamicDLModel(**inputDict)
         return outputObj
         

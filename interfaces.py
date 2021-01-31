@@ -68,9 +68,15 @@ class DeepLearningClass(ABC):
 
         """
         pass
-    
+
+    def sum(self, other):
+        """
+        Note: this defaults to apply_delta. Redefine to change behavior
+        """
+        return self.apply_delta(other)
+
     def __add__(self, rhs):
-        return self.apply_delta(rhs)
+        return self.sum(rhs)
     
     @abstractmethod
     def incremental_learn(self, training_data: dict, training_outputs: string):
@@ -109,6 +115,24 @@ class DeepLearningClass(ABC):
 
         """
         pass
+
+    @abstractmethod
+    def factor_multiply(self, factor: float):
+        """
+        Multiplies all the weights by a float factor
+        
+        """
+        pass
+
+    def __mul__(self, factor: float):
+        if not isinstance(factor, (int, float)):
+            raise NotImplementedError('Incompatible types for multiplication (only multiplication by numeric factor is allowed)')
+        return self.factor_multiply(factor)
+
+    def __rmul__(self, factor: float):
+        if not isinstance(factor, (int, float)):
+            raise NotImplementedError('Incompatible types for multiplication (only multiplication by numeric factor is allowed)')
+        return self.factor_multiply(factor)
 
     def __call__(self, data: dict):
         return self.apply(data)
