@@ -158,9 +158,6 @@ class DynamicDLModel(DeepLearningClass):
 
         if weights: self.set_weights(weights)
 
-    def reset_timestamp(self):
-        self.timestamp_id = int(time.time())
-
     def set_internal_fn(self, internal_name, obj):
         #print('Setting', internal_name)
         if callable(obj):

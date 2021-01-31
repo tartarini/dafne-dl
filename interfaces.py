@@ -10,6 +10,7 @@ from abc import ABC, abstractmethod
 from io import BytesIO
 from typing import IO, Callable
 import numpy as np
+import time
 
 
 class IncompatibleModelError(Exception):
@@ -79,7 +80,7 @@ class DeepLearningClass(ABC):
         return self.sum(rhs)
     
     @abstractmethod
-    def incremental_learn(self, training_data: dict, training_outputs: string):
+    def incremental_learn(self, training_data: dict, training_outputs: str):
         """
         Perform an incremental learning step on the given training data/outputs
 
@@ -136,6 +137,9 @@ class DeepLearningClass(ABC):
 
     def __call__(self, data: dict):
         return self.apply(data)
+
+    def reset_timestamp(self):
+        self.timestamp_id = int(time.time())
 
 class ModelProvider(ABC):
     """

@@ -11,10 +11,8 @@ import multiprocessing
 import time
 from config import GlobalConfig
 
-MODEL_TEMP_DIR = GlobalConfig['MODEL_TEMP_UPLOAD_DIR']
 UPLOAD_RETRIES = 3
 TIME_BETWEEN_RETRIES = 10
-os.makedirs(MODEL_TEMP_DIR, exist_ok=True)
 
 def upload_model(url_base, filename, modelName, api_key, dice):
     for retries in range(UPLOAD_RETRIES):
@@ -41,10 +39,11 @@ def upload_model(url_base, filename, modelName, api_key, dice):
 
 class RemoteModelProvider(ModelProvider):
     
-    def __init__(self, models_path, url_base, api_key):
+    def __init__(self, models_path, url_base, api_key, temp_upload_dir):
         self.models_path = Path(models_path)
         self.url_base = url_base
         self.api_key = api_key
+        self.temp_upload_dir = temp_upload_dir
         os.makedirs(self.models_path, exist_ok=True)
         print(f"Config: {self.url_base}, {self.api_key}")
 
@@ -158,7 +157,7 @@ class RemoteModelProvider(ModelProvider):
             model: DynamicDLModel
         """
         print("Uploading model...")
-        filename_out = os.path.join(MODEL_TEMP_DIR, f'{modelName}_{str(int(time.time()))}.model')
+        filename_out = os.path.join(self.temp_upload_dir, f'{modelName}_{model.timestamp_id}.model')
         model.dump(open(filename_out, 'wb'))
         upload_process = multiprocessing.Process(target=upload_model, args=(self.url_base, filename_out, modelName,
                                                                             self.api_key, dice_score))
