@@ -4,8 +4,6 @@
 Implementation of a deep learning module that can be serialized and deserialized, and dynamically changed.
 Functions for the operation of the class are provided as references to top-level functions.
 Such top level functions should define all the imports within themselves (i.e. don't put the imports at the top of the file).
-
-@author: francesco
 """
 from __future__ import annotations
 from .interfaces import IncompatibleModelError, DeepLearningClass

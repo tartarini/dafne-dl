@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Thu Oct 15 19:25:52 2020
-
-@author: francesco
-"""
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from io import BytesIO

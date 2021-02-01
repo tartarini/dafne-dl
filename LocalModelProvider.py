@@ -1,10 +1,5 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""
-Created on Mon Oct 19 14:39:39 2020
-
-@author: francesco
-"""
 from pathlib import Path
 
 from .interfaces import ModelProvider
