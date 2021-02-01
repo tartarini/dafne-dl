@@ -9,10 +9,12 @@ from .DynamicDLModel import DynamicDLModel
 from typing import IO, Callable, List, Union
 import multiprocessing
 import time
+import datetime
 from config import GlobalConfig
 
 UPLOAD_RETRIES = 3
 TIME_BETWEEN_RETRIES = 10
+
 
 def upload_model(url_base, filename, modelName, api_key, dice):
     for retries in range(UPLOAD_RETRIES):
@@ -23,6 +25,27 @@ def upload_model(url_base, filename, modelName, api_key, dice):
                           data={"model_type": modelName,
                                 "api_key": api_key,
                                 "dice": dice})
+        print(f"status code: {r.status_code}")
+        try:
+            print(f"message: {r.json()['message']}")
+        except:
+            pass
+
+        if r.status_code == 200:
+            print("upload successful") # success
+            break
+        print('Upload error')
+        time.sleep(TIME_BETWEEN_RETRIES)
+    os.remove(filename)
+
+
+def upload_data(url_base, filename, api_key):
+    for retries in range(UPLOAD_RETRIES):
+        print(f"Sending {filename}")
+        files = {'data_binary': open(filename, 'rb')}
+        r = requests.post(url_base + "upload_data",
+                          files=files,
+                          data={"api_key": api_key})
         print(f"status code: {r.status_code}")
         try:
             print(f"message: {r.json()['message']}")
@@ -164,7 +187,12 @@ class RemoteModelProvider(ModelProvider):
         upload_process.start()
 
     def _upload_bytes(self, data: IO):
-        # TODO implementation of data upload
         # Note: the don't pass data directly to requests because the byte stream is not at the start.
         # Use getbuffer or getvalue instead. See https://github.com/psf/requests/issues/2589
-        print("Data upload not yet implemented")
+        print("Uploading data")
+        filename = datetime.datetime.now().strftime("data_%Y%m%d_%H%M%S.npz")
+        filename_out = os.path.join(self.temp_upload_dir, filename)
+        with open(filename_out, 'wb') as f:
+            f.write(data.getbuffer())
+        upload_process = multiprocessing.Process(target=upload_data, args=(self.url_base, filename_out, self.api_key))
+        upload_process.start()

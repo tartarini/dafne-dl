@@ -45,13 +45,16 @@ def source_to_fn(source):
     #print("source to fn: source is string")
     locs = {}
     globs = {}
-    exec(source, globs, locs)
+    try:
+        exec(source, globs, locs)
+    except:
+        return source # the string was just a string apparently, not valid code
     for k,v in locs.items():
         if callable(v):
             #print('source_to_fn. Found function', k)
             v.source = source
             return v
-    return None
+    return source
 
 
 def default_keras_weights_to_model_function(modelObj: DynamicDLModel, weights):
@@ -76,6 +79,7 @@ def default_keras_delta_function(lhs: DynamicDLModel, rhs: DynamicDLModel, thres
     outputObj = lhs.get_empty_copy()
     outputObj.set_weights(newWeights)
     outputObj.is_delta = True
+    outputObj.timestamp_id = rhs.timestamp_id # set the timestamp of the original model to identify the base
     return outputObj
 
 
@@ -133,6 +137,7 @@ class DynamicDLModel(DeepLearningClass):
         self.model_id = model_id
         self.is_delta = is_delta
 
+        # lsit identifying the external functions that need to be saved with source and serialized
         self.function_mappings = [
             'init_model_function',
             'apply_model_function',
