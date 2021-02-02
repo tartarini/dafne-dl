@@ -45,4 +45,11 @@ long_labels = {
     12: 'Adductor Longus'
 }
 
+long_labels_split = {}
+ctr = 1
+for key, val in long_labels.items():
+    long_labels_split[ctr] = val + "_R"
+    long_labels_split[ctr+1] = val + "_L"
+    ctr += 2
+
 inverse_labels = merge_dict(invert_dict(short_labels), invert_dict(long_labels))
