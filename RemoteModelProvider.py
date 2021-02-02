@@ -23,7 +23,7 @@ import requests
 from .interfaces import ModelProvider
 from .DynamicDLModel import DynamicDLModel
 from typing import IO, Callable, List, Union
-import multiprocessing
+import threading
 import time
 import datetime
 from config import GlobalConfig
@@ -198,9 +198,9 @@ class RemoteModelProvider(ModelProvider):
         print("Uploading model...")
         filename_out = os.path.join(self.temp_upload_dir, f'{modelName}_{model.timestamp_id}.model')
         model.dump(open(filename_out, 'wb'))
-        upload_process = multiprocessing.Process(target=upload_model, args=(self.url_base, filename_out, modelName,
+        upload_thread = threading.Thread(target=upload_model, args=(self.url_base, filename_out, modelName,
                                                                             self.api_key, dice_score))
-        upload_process.start()
+        upload_thread.start()
 
     def _upload_bytes(self, data: IO):
         # Note: the don't pass data directly to requests because the byte stream is not at the start.
@@ -210,5 +210,5 @@ class RemoteModelProvider(ModelProvider):
         filename_out = os.path.join(self.temp_upload_dir, filename)
         with open(filename_out, 'wb') as f:
             f.write(data.getbuffer())
-        upload_process = multiprocessing.Process(target=upload_data, args=(self.url_base, filename_out, self.api_key))
-        upload_process.start()
+        upload_thread = threading.Thread(target=upload_data, args=(self.url_base, filename_out, self.api_key))
+        upload_thread.start()
