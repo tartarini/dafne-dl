@@ -26,7 +26,6 @@ from typing import IO, Callable, List, Union
 import threading
 import time
 import datetime
-from config import GlobalConfig
 
 UPLOAD_RETRIES = 3
 TIME_BETWEEN_RETRIES = 10

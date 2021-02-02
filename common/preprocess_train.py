@@ -336,18 +336,28 @@ def common_input_process_split(inverse_label_dict, MODEL_RESOLUTION, MODEL_SIZE,
         mask_dataset_left = np.zeros((MODEL_SIZE_SPLIT[0], MODEL_SIZE_SPLIT[1], nlabels))
         mask_dataset_right = np.zeros((MODEL_SIZE_SPLIT[0], MODEL_SIZE_SPLIT[1], nlabels))
         defined_rois = 0
+
+        # first, count the defined ROIS, before doing lengthy calculations
         for label, mask in trainingOutputs[imageIndex].items():
-            xl=label.find('_L')
-            xr=label.find('_R')
-            if (xr>0):
-                continue
-            if (xl>0):
-                mask=np.logical_or(trainingOutputs[imageIndex][label[:xl]+'_L'],trainingOutputs[imageIndex][label[:xl]+'_R'])
+            xl = label.endswith('_L')
+            xr = label.endswith('_R')
+            base_label = label[:-2]
+            if xr:
+                if (base_label + '_L') in trainingOutputs[imageIndex]:
+                    continue  # if laterality is split, merge the right into the left
+                label = base_label
+            if xl:
+                if (base_label + '_R') in trainingOutputs[imageIndex]:
+                    mask = np.logical_or(trainingOutputs[imageIndex][base_label + '_L'],
+                                         trainingOutputs[imageIndex][base_label + '_R'])
+                label = base_label
+
+            if label not in inverse_label_dict: continue
+
             if np.sum(mask) > 5:
                 defined_rois += 1
             else:
                 continue # avoid adding empty masks
-
            
         if defined_rois > min_defined_rois:
             image = trainingData['image_list'][imageIndex]
@@ -363,12 +373,21 @@ def common_input_process_split(inverse_label_dict, MODEL_RESOLUTION, MODEL_SIZE,
             right=padorcut(right, MODEL_SIZE_SPLIT)
 
             for label, mask in trainingOutputs[imageIndex].items():
-                xl=label.find('_L')
-                xr=label.find('_R')
-                if (xr>0):
-                    continue
-                if (xl>0):
-                    mask=np.logical_or(trainingOutputs[imageIndex][label[:xl]+'_L'],trainingOutputs[imageIndex][label[:xl]+'_R'])
+                xl = label.endswith('_L')
+                xr = label.endswith('_R')
+                base_label = label[:-2]
+                if xr:
+                    if (base_label + '_L') in trainingOutputs[imageIndex]:
+                        continue  # if laterality is split, merge the right into the left
+                    label = base_label
+                if xl:
+                    if (base_label + '_R') in trainingOutputs[imageIndex]:
+                        mask = np.logical_or(trainingOutputs[imageIndex][base_label + '_L'],
+                                             trainingOutputs[imageIndex][base_label + '_R'])
+                    label = base_label
+
+                if label not in inverse_label_dict: continue
+
                 mask = skimage.morphology.area_opening(mask, area_threshold=4)
                 mask = skimage.morphology.area_closing(mask, area_threshold=4)
                 mask = padorcut(zoom(mask, zoomFactor, order=0), MODEL_SIZE)
@@ -377,12 +396,9 @@ def common_input_process_split(inverse_label_dict, MODEL_RESOLUTION, MODEL_SIZE,
                 roiright=mask[int(b1):int(b2),int(a3):int(a4)]
                 roiright=roiright[::1,::-1]
                 roiright=padorcut(roiright, MODEL_SIZE_SPLIT)
-                if (xl>0):
-                    mask_dataset_left[:, :, int(inverse_label_dict[label[:xl]])] = roileft
-                    mask_dataset_right[:, :, int(inverse_label_dict[label[:xl]])] = roiright
-                else:
-                    mask_dataset_left[:, :, int(inverse_label_dict[label])] = roileft
-                    mask_dataset_right[:, :, int(inverse_label_dict[label])] = roiright
+
+                mask_dataset_left[:, :, int(inverse_label_dict[label])] = roileft
+                mask_dataset_right[:, :, int(inverse_label_dict[label])] = roiright
 
             image_list.append(left)
             mask_list.append(mask_dataset_left)
