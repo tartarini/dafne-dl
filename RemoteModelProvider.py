@@ -130,6 +130,7 @@ class RemoteModelProvider(ModelProvider):
                 return model
             else:
                 print('Local model is corrupt')
+                os.remove(latest_model_path)
 
         print("Downloading new model...")
 
