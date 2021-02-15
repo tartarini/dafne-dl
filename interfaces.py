@@ -159,7 +159,7 @@ class ModelProvider(ABC):
     """
     
     @abstractmethod
-    def load_model(self, model_name: str, progress_callback: Callable[[int, int], None] = None) -> DeepLearningClass:
+    def load_model(self, model_name: str, progress_callback: Callable[[int, int], None] = None, force_download: bool = False) -> DeepLearningClass:
         """
 
         Parameters
@@ -168,6 +168,8 @@ class ModelProvider(ABC):
             The name of the model to load.
         progress_callback: Callable[[int, int], None] (optional)
             Callback function for progress
+        force_download: bool
+            Sets the forced redownload of models
 
         Returns
         -------

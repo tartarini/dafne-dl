@@ -37,7 +37,7 @@ class LocalModelProvider(ModelProvider):
         model_names = list(filter(None, model_names)) # remove any empty names
         return model_names
 
-    def load_model(self, modelName: str, progress_callback: Callable[[int, int], None] = None) -> DynamicDLModel:
+    def load_model(self, model_name: str, progress_callback: Callable[[int, int], None] = None, force_download=False) -> DynamicDLModel:
         print(f"Loading model: {modelName}")
         model_file = sorted(list(self.models_path.glob(f"{modelName}_*.model")))
         if len(model_file) == 0:

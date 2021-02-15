@@ -90,21 +90,21 @@ class RemoteModelProvider(ModelProvider):
         os.makedirs(self.models_path, exist_ok=True)
         print(f"Config: {self.url_base}, {self.api_key}")
 
-    def load_model(self, modelName: str, progress_callback: Callable[[int, int], None] = None) -> DynamicDLModel:
+    def load_model(self, model_name: str, progress_callback: Callable[[int, int], None] = None, force_download=False) -> DynamicDLModel:
         """
         Load latest model from remote server if it does not already exist locally.
 
         Args:
-            modelName: Classifier | Thigh | Leg
+            model_name: Classifier | Thigh | Leg
 
         Returns:
             DynamicDLModel or None
         """
-        print(f"Loading model: {modelName}")
+        print(f"Loading model: {model_name}")
 
         # Get the name of the latest model
         r = requests.post(self.url_base + "info_model",
-                          json={"model_type": modelName,
+                          json={"model_type": model_name,
                                 "api_key": self.api_key})
         if r.ok:
             json_content = r.json()
@@ -120,8 +120,8 @@ class RemoteModelProvider(ModelProvider):
             return None
 
         # Check if model already exists locally
-        latest_model_path = self.models_path / f"{modelName}_{latest_timestamp}.model"
-        if os.path.exists(latest_model_path):
+        latest_model_path = self.models_path / f"{model_name}_{latest_timestamp}.model"
+        if os.path.exists(latest_model_path) and not force_download:
             print("Model already downloaded. Checking hash...")
             file_hash_local = calculate_file_hash(latest_model_path)
             if file_hash_local == file_hash_remote:
@@ -136,7 +136,7 @@ class RemoteModelProvider(ModelProvider):
 
         # Receive model
         r = requests.post(self.url_base + "get_model",
-                          json={"model_type": modelName,
+                          json={"model_type": model_name,
                                 "timestamp": latest_timestamp,
                                 "api_key": self.api_key},
                           stream=True)
@@ -168,7 +168,7 @@ class RemoteModelProvider(ModelProvider):
             model = DynamicDLModel.Load(open(latest_model_path, "rb"))
 
             # Deleting older models
-            old_models = self.models_path.glob(f"{modelName}_*.model")
+            old_models = self.models_path.glob(f"{model_name}_*.model")
             print("Deleting old models: ")
             for old_model in old_models:
                 if old_model != latest_model_path:
