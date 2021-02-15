@@ -26,12 +26,16 @@ from typing import IO, Callable, List, Union
 import threading
 import time
 import datetime
+from .misc import calculate_file_hash
 
 UPLOAD_RETRIES = 3
 TIME_BETWEEN_RETRIES = 10
 
 
 def upload_model(url_base, filename, modelName, api_key, dice):
+    print('Calculating hash...')
+    file_hash = calculate_file_hash(filename)
+    print(file_hash)
     for retries in range(UPLOAD_RETRIES):
         print(f"Sending {filename}")
         files = {'model_binary': open(filename, 'rb')}
@@ -39,7 +43,8 @@ def upload_model(url_base, filename, modelName, api_key, dice):
                           files=files,
                           data={"model_type": modelName,
                                 "api_key": api_key,
-                                "dice": dice})
+                                "dice": dice,
+                                "hash": file_hash})
         print(f"status code: {r.status_code}")
         try:
             print(f"message: {r.json()['message']}")
@@ -102,7 +107,9 @@ class RemoteModelProvider(ModelProvider):
                           json={"model_type": modelName,
                                 "api_key": self.api_key})
         if r.ok:
-            latest_timestamp = r.json()['latest_timestamp']
+            json_content = r.json()
+            latest_timestamp = json_content['latest_timestamp']
+            file_hash_remote = json_content['hash']
         else:
             print("ERROR: Request to server failed")
             print(f"status code: {r.status_code}")
@@ -115,11 +122,16 @@ class RemoteModelProvider(ModelProvider):
         # Check if model already exists locally
         latest_model_path = self.models_path / f"{modelName}_{latest_timestamp}.model"
         if os.path.exists(latest_model_path):
-            print("Model already downloaded. Loading...")
-            model = DynamicDLModel.Load(open(latest_model_path, 'rb'))
-            return model
-        else:
-            print("Downloading new model...")
+            print("Model already downloaded. Checking hash...")
+            file_hash_local = calculate_file_hash(latest_model_path)
+            if file_hash_local == file_hash_remote:
+                print('Model exists, skipping download')
+                model = DynamicDLModel.Load(open(latest_model_path, 'rb'))
+                return model
+            else:
+                print('Local model is corrupt')
+
+        print("Downloading new model...")
 
         # Receive model
         r = requests.post(self.url_base + "get_model",
@@ -143,9 +155,10 @@ class RemoteModelProvider(ModelProvider):
                     file.write(data)
 
             print("Downloaded size", current_size)
+            file_hash_local = calculate_file_hash(latest_model_path)
 
-            if current_size != total_size_in_bytes:
-                print("Download interrupted!")
+            if current_size != total_size_in_bytes or file_hash_local != file_hash_remote:
+                print("Download failed!")
                 os.remove(latest_model_path)
                 success = False
 
