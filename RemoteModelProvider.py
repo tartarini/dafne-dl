@@ -163,6 +163,7 @@ class RemoteModelProvider(ModelProvider):
                 success = False
 
         if success:
+            print('Model check OK')
             model = DynamicDLModel.Load(open(latest_model_path, "rb"))
 
             # Deleting older models
