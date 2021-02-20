@@ -38,8 +38,8 @@ class LocalModelProvider(ModelProvider):
         return model_names
 
     def load_model(self, model_name: str, progress_callback: Callable[[int, int], None] = None, force_download=False) -> DynamicDLModel:
-        print(f"Loading model: {modelName}")
-        model_file = sorted(list(self.models_path.glob(f"{modelName}_*.model")))
+        print(f"Loading model: {model_name}")
+        model_file = sorted(list(self.models_path.glob(f"{model_name}_*.model")))
         if len(model_file) == 0:
             raise FileNotFoundError("Could not find model file.")
         print('Opening', model_file[-1])
@@ -53,9 +53,9 @@ class LocalModelProvider(ModelProvider):
     def available_models(self) -> str:
         return self.get_model_names()
 
-    def upload_model(self, modelName: str, model: DynamicDLModel, dice_score: float=0.0):
+    def upload_model(self, model_name: str, model: DynamicDLModel, dice_score: float=0.0):
         print("You are using the LocalModelProvider. Model is saved in the model directory!")
-        filename = f'{modelName}_{model.timestamp_id}.model'
+        filename = f'{model_name}_{model.timestamp_id}.model'
         print('Saving', filename)
         model.dump(open(os.path.join(self.models_path, filename), 'wb'))
 

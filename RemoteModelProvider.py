@@ -32,7 +32,7 @@ UPLOAD_RETRIES = 3
 TIME_BETWEEN_RETRIES = 10
 
 
-def upload_model(url_base, filename, modelName, api_key, dice):
+def upload_model(url_base, filename, model_name, api_key, dice):
     print('Calculating hash...')
     file_hash = calculate_file_hash(filename)
     print(file_hash)
@@ -41,7 +41,7 @@ def upload_model(url_base, filename, modelName, api_key, dice):
         files = {'model_binary': open(filename, 'rb')}
         r = requests.post(url_base + "upload_model",
                           files=files,
-                          data={"model_type": modelName,
+                          data={"model_type": model_name,
                                 "api_key": api_key,
                                 "dice": dice,
                                 "hash": file_hash})
@@ -201,19 +201,19 @@ class RemoteModelProvider(ModelProvider):
                 raise PermissionError("Your api_key is invalid.")
             return None
 
-    def upload_model(self, modelName: str, model: DynamicDLModel, dice_score: float = 0.0):
+    def upload_model(self, model_name: str, model: DynamicDLModel, dice_score: float = 0.0):
         """
         Upload model to server
         
         Args:
-            modelName: classifier | thigh | leg
+            model_name: classifier | thigh | leg
             model: DynamicDLModel
         """
         print("Uploading model...")
-        filename_out = os.path.join(self.temp_upload_dir, f'{modelName}_{model.timestamp_id}.model')
+        filename_out = os.path.join(self.temp_upload_dir, f'{model_name}_{model.timestamp_id}.model')
         model.dump(open(filename_out, 'wb'))
-        upload_thread = threading.Thread(target=upload_model, args=(self.url_base, filename_out, modelName,
-                                                                            self.api_key, dice_score))
+        upload_thread = threading.Thread(target=upload_model, args=(self.url_base, filename_out, model_name,
+                                                                    self.api_key, dice_score))
         upload_thread.start()
 
     def _upload_bytes(self, data: IO):
