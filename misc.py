@@ -48,3 +48,14 @@ def calculate_file_hash(file_path, cache_results=False, force_rewrite_cache=Fals
         print('Error writing hash to file')
     return output_hash
 
+
+def calc_dice_score(y_true, y_pred):
+    """
+    Binary f1. Same results as sklearn f1 binary.
+
+    y_true: 1D / 2D / 3D array
+    y_pred: 1D / 2D / 3D array
+    """
+    intersect = np.sum(y_true * y_pred)  # works because all multiplied by 0 gets 0
+    denominator = np.sum(y_true) + np.sum(y_pred)  # works because all multiplied by 0 gets 0
+    return (2 * intersect) / (denominator + 1e-6)
