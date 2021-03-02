@@ -19,6 +19,8 @@
 import hashlib
 import os
 
+import numpy as np
+
 
 def calculate_file_hash(file_path, cache_results=False, force_rewrite_cache=False):
     if not cache_results:
