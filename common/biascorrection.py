@@ -24,9 +24,18 @@ def biascorrection(file_or_image):
         return biascorrection_image(file_or_image)
 
 def biascorrection_image(image):
+    MAX_GRAY_VALUE = 600
     if not type(image) == sitk.SimpleITK.Image:
+        # normalize values
+        image = image*MAX_GRAY_VALUE/image.max()
         image = sitk.GetImageFromArray(image)
         image=sitk.Cast(image, sitk.sitkFloat32)
+    else:
+        image = sitk.GetArrayFromImage(image)
+        image = image * MAX_GRAY_VALUE / image.max()
+        image = sitk.GetImageFromArray(image)
+        image = sitk.Cast(image, sitk.sitkFloat32)
+
     maskImage = sitk.OtsuThreshold(image, 0, 1, 200)
     corrector = sitk.N4BiasFieldCorrectionImageFilter()
     numberFittingLevels = 4
