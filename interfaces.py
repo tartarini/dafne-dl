@@ -19,7 +19,7 @@
 from __future__ import annotations
 from abc import ABC, abstractmethod
 from io import BytesIO
-from typing import IO, Callable
+from typing import IO, Callable, List, Union, Optional, Dict
 import numpy as np
 import time
 
@@ -159,8 +159,11 @@ class ModelProvider(ABC):
     """
     
     @abstractmethod
-    def load_model(self, model_name: str, progress_callback: Callable[[int, int], None] = None, force_download: bool = False) -> DeepLearningClass:
+    def load_model(self, model_name: str, progress_callback: Optional[Callable[[int, int], None]] = None,
+                   force_download: bool = False,
+                   timestamp: Optional[Union[int,str]] = None) -> DeepLearningClass:
         """
+        Loads a deep learning model.
 
         Parameters
         ----------
@@ -170,16 +173,35 @@ class ModelProvider(ABC):
             Callback function for progress
         force_download: bool
             Sets the forced redownload of models
+        timestamp: int or None
+            Return a specific model version (default: latest)
 
         Returns
         -------
-        The weights of the model.
+        The model object.
 
         """
         pass
 
     @abstractmethod
-    def upload_model(self, model_name: str, model: DeepLearningClass, dice_score: float=0.0):
+    def model_details(self, model_name: str) -> dict:
+        pass
+
+    @abstractmethod
+    def available_models(self) -> Optional[list[str]]:
+        """
+        Parameters
+        ----------
+        None
+
+        Returns
+        -------
+        List of available models
+        """
+        pass
+
+    @abstractmethod
+    def upload_model(self, model_name: str, model: DeepLearningClass, dice_score: float=0.0) -> None:
         """
         Parameters
         ----------
@@ -192,7 +214,7 @@ class ModelProvider(ABC):
         """
         pass
 
-    def upload_data(self, data: dict):
+    def upload_data(self, data: dict) -> None:
         """
         Uploads data to the server. Converts the data into a stream before calling _upload_bytes
 

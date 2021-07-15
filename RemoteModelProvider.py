@@ -15,14 +15,15 @@
 #
 #  You should have received a copy of the GNU General Public License
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
-
+import json
 import os
+from copy import copy
 from pathlib import Path
 import requests
 
 from .interfaces import ModelProvider
 from .DynamicDLModel import DynamicDLModel
-from typing import IO, Callable, List, Union
+from typing import IO, Callable, List, Union, Optional
 import threading
 import time
 import datetime
@@ -82,62 +83,78 @@ def upload_data(url_base, filename, api_key):
 
 class RemoteModelProvider(ModelProvider):
     
-    def __init__(self, models_path, url_base, api_key, temp_upload_dir):
+    def __init__(self, models_path, url_base, api_key, temp_upload_dir, delete_old_models = True):
         self.models_path = Path(models_path)
         self.url_base = url_base
         self.api_key = api_key
         self.temp_upload_dir = temp_upload_dir
+        self.delete_old_models = delete_old_models
         os.makedirs(self.models_path, exist_ok=True)
         print(f"Config: {self.url_base}, {self.api_key}")
 
-    def load_model(self, model_name: str, progress_callback: Callable[[int, int], None] = None, force_download=False) -> DynamicDLModel:
+    def load_model(self, model_name: str, progress_callback: Optional[Callable[[int, int], None]] = None,
+                   force_download: bool = False,
+                   timestamp: Optional[Union[int,str]] = None) -> DynamicDLModel:
         """
         Load latest model from remote server if it does not already exist locally.
 
-        Args:
-            model_name: Classifier | Thigh | Leg
+        Parameters
+        ----------
+        model_name : str
+            The name of the model to load.
+        progress_callback: Callable[[int, int], None] (optional)
+            Callback function for progress
+        force_download: bool
+            Sets the forced redownload of models
+        timestamp: int or None
+            Return a specific model version (default: latest)
 
-        Returns:
-            DynamicDLModel or None
+        Returns
+        -------
+        The model object.
         """
         print(f"Loading model: {model_name}")
+
+        json_content = self.model_details(model_name)
+
+        if json_content is None:
+            return None
 
         # Get the name of the latest model
         r = requests.post(self.url_base + "info_model",
                           json={"model_type": model_name,
                                 "api_key": self.api_key})
-        if r.ok:
-            json_content = r.json()
-            latest_timestamp = json_content['latest_timestamp']
-            file_hash_remote = json_content['hash']
-        else:
-            print("ERROR: Request to server failed")
-            print(f"status code: {r.status_code}")
-            try:
-                print(f"message: {r.json()['message']}")
-            except:
-                pass
-            return None
+
+        if timestamp is None:
+            timestamp = json_content['latest_timestamp']
+
+        timestamp = str(timestamp)
+
+        try:
+            hash_dict = json_content['hashes']
+            file_hash_remote = hash_dict[timestamp]
+        except:
+            file_hash_remote = json_content['hash'] # fallback to latest hash
 
         # Check if model already exists locally
-        latest_model_path = self.models_path / f"{model_name}_{latest_timestamp}.model"
-        if os.path.exists(latest_model_path) and not force_download:
+        local_model_path = self.models_path / f"{model_name}_{timestamp}.model"
+        if os.path.exists(local_model_path) and not force_download:
             print("Model already downloaded. Checking hash...")
-            file_hash_local = calculate_file_hash(latest_model_path)
+            file_hash_local = calculate_file_hash(local_model_path)
             if file_hash_local == file_hash_remote:
                 print('Model exists, skipping download')
-                model = DynamicDLModel.Load(open(latest_model_path, 'rb'))
+                model = DynamicDLModel.Load(open(local_model_path, 'rb'))
                 return model
             else:
                 print('Local model is corrupt')
-                os.remove(latest_model_path)
+                os.remove(local_model_path)
 
         print("Downloading new model...")
 
         # Receive model
         r = requests.post(self.url_base + "get_model",
                           json={"model_type": model_name,
-                                "timestamp": latest_timestamp,
+                                "timestamp": timestamp,
                                 "api_key": self.api_key},
                           stream=True)
         success = False
@@ -147,7 +164,7 @@ class RemoteModelProvider(ModelProvider):
             print("Size to download:", total_size_in_bytes)
             block_size = 1024*1024  # 1 MB
             current_size = 0
-            with open(latest_model_path, 'wb') as file:
+            with open(local_model_path, 'wb') as file:
                 for data in r.iter_content(block_size):
                     current_size += len(data)
                     #print(current_size)
@@ -156,25 +173,25 @@ class RemoteModelProvider(ModelProvider):
                     file.write(data)
 
             print("Downloaded size", current_size)
-            file_hash_local = calculate_file_hash(latest_model_path)
+            file_hash_local = calculate_file_hash(local_model_path)
 
             if current_size != total_size_in_bytes or file_hash_local != file_hash_remote:
                 print("Download failed!")
-                os.remove(latest_model_path)
+                os.remove(local_model_path)
                 success = False
 
         if success:
             print('Model check OK')
-            model = DynamicDLModel.Load(open(latest_model_path, "rb"))
+            model = DynamicDLModel.Load(open(local_model_path, "rb"))
 
-            # Deleting older models
-            old_models = self.models_path.glob(f"{model_name}_*.model")
-            print("Deleting old models: ")
-            for old_model in old_models:
-                if old_model != latest_model_path:
-                    print(f"  Deleting: {str(old_model)}")
-                    os.remove(old_model)
-
+            if self.delete_old_models:
+                # Deleting older models
+                old_models = self.models_path.glob(f"{model_name}_*.model")
+                print("Deleting old models: ")
+                for old_model in old_models:
+                    if old_model != local_model_path:
+                        print(f"  Deleting: {str(old_model)}")
+                        os.remove(old_model)
             return model
         else:
             print("ERROR: Request to server failed")
@@ -184,7 +201,39 @@ class RemoteModelProvider(ModelProvider):
             except:
                 pass
             return None
-    
+
+    def model_details(self, model_name: str) -> dict:
+        # get model versions
+        # Get the name of the latest model
+        r = requests.post(self.url_base + "info_model",
+                          json={"model_type": model_name,
+                                "api_key": self.api_key})
+        if r.ok:
+            json_content = r.json()
+        else:
+            print("ERROR: Request to server failed")
+            print(f"status code: {r.status_code}")
+            try:
+                print(f"message: {r.json()['message']}")
+            except:
+                pass
+            return None
+
+        # store json data in cache without the model-specific parts
+        json_out = copy(json_content)
+        keys_to_delete = ['hash', 'hashes', 'latest_timestamp', 'timestamps']
+        for k in keys_to_delete:
+            try:
+                del json_out[k]
+            except KeyError:
+                pass
+
+        json.dump(json_out, open(self.models_path / f'{model_name}.json', 'wb'))
+
+        print("Model details:", json_content)
+
+        return json_content
+
     def available_models(self) -> Union[None, List[str]]:
         r = requests.post(self.url_base + "get_available_models",
                           json={"api_key": self.api_key})
