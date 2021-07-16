@@ -36,7 +36,7 @@ def calculate_file_hash(file_path, cache_results=False, force_rewrite_cache=Fals
             print('Error while reading from hash file')
         else:
             if len(output_hash) == 64:
-                print('Using cached hash')
+                #print('Using cached hash')
                 return output_hash
             else:
                 print('Invalid stored hash')
