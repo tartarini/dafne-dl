@@ -228,7 +228,7 @@ class RemoteModelProvider(ModelProvider):
             except KeyError:
                 pass
 
-        json.dump(json_out, open(self.models_path / f'{model_name}.json', 'wb'))
+        json.dump(json_out, open(self.models_path / f'{model_name}.json', 'w'))
 
         print("Model details:", json_content)
 
