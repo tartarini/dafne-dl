@@ -407,6 +407,72 @@ def common_input_process_split(inverse_label_dict, MODEL_RESOLUTION, MODEL_SIZE,
 
     return image_list, mask_list
 
+
+def common_input_process_single(inverse_label_dict, MODEL_RESOLUTION, MODEL_SIZE, MODEL_SIZE_SPLIT, trainingData,
+                               trainingOutputs, swap):
+    nlabels = len(set(inverse_label_dict.values())) + 1  # get the number of unique values in the inverse dict
+    min_defined_rois = nlabels / 2  # do not add to the training set if less than this number of ROIs are defined
+    resolution = np.array(trainingData['resolution'])
+    zoomFactor = resolution / MODEL_RESOLUTION
+
+    image_list = []
+    mask_list = []
+    for imageIndex in range(len(trainingData['image_list'])):
+        mask_dataset = np.zeros((MODEL_SIZE_SPLIT[0], MODEL_SIZE_SPLIT[1], nlabels))
+        defined_rois = 0
+
+        # first, count the defined ROIS, before doing lengthy calculations
+        for label, mask in trainingOutputs[imageIndex].items():
+            xl = label.endswith('_L')
+            xr = label.endswith('_R')
+            if xl or xr:
+                base_label = label[:-2]
+            else:
+                base_label = label
+
+            if base_label not in inverse_label_dict: continue
+
+            if np.sum(mask) > 5:
+                defined_rois += 1
+                print(base_label, 'Found, total rois:', defined_rois)
+            else:
+                continue  # avoid adding empty masks
+
+        if defined_rois > min_defined_rois:
+            image = trainingData['image_list'][imageIndex]
+            image = skimage.morphology.area_opening(image, area_threshold=4)
+            image = skimage.morphology.area_closing(image, area_threshold=4)
+            image = padorcut(zoom(image, zoomFactor), MODEL_SIZE_SPLIT)
+            imgbc = biascorrection.biascorrection_image(image)
+
+            if swap:
+                imgbc = imgbc[::1,::-1]
+
+            for label, mask in trainingOutputs[imageIndex].items():
+                xl = label.endswith('_L')
+                xr = label.endswith('_R')
+                if xl or xr:
+                    base_label = label[:-2]
+                else:
+                    base_label = label
+
+                if base_label not in inverse_label_dict: continue
+
+                mask = skimage.morphology.area_opening(mask, area_threshold=4)
+                mask = skimage.morphology.area_closing(mask, area_threshold=4)
+                mask = padorcut(zoom(mask, zoomFactor, order=0), MODEL_SIZE_SPLIT)
+
+                if swap:
+                    mask = mask[::1,::-1]
+
+                mask_dataset[:, :, int(inverse_label_dict[base_label])] = mask
+
+            image_list.append(imgbc)
+            mask_list.append(mask_dataset)
+
+    return image_list, mask_list
+
+
 def weighted_loss(y_true,y_pred):
     weight_matrix=K.flatten(y_pred[:,:,:,-1])
     y_pre=y_pred[:,:,:,:-1]
