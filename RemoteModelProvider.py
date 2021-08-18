@@ -275,3 +275,15 @@ class RemoteModelProvider(ModelProvider):
             f.write(data.getbuffer())
         upload_thread = threading.Thread(target=upload_data, args=(self.url_base, filename_out, self.api_key))
         upload_thread.start()
+
+    def log(self, msg: str):
+        r = requests.post(self.url_base + "log",
+                        json={"api_key": self.api_key,
+                              "message": str(msg)})
+
+        if not r.ok:
+            if r.status_code == 401:
+                raise PermissionError("Your api_key is invalid.")
+            else:
+                raise OSError("Error communicating with server")
+

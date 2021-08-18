@@ -124,3 +124,6 @@ class LocalModelProvider(ModelProvider):
         with open(os.path.join(self.upload_dir, filename), 'wb') as f:
             f.write(data.getbuffer())
         print('File saved')
+
+    def log(self, msg: str):
+        print("LocalModelProvider log", msg)

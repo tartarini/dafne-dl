@@ -241,3 +241,15 @@ class ModelProvider(ABC):
             byte stream that is sent to the server.
         """
         pass
+
+    @abstractmethod
+    def log(self, msg: str):
+        """
+        Sends a message to the server to be logged
+
+        Parameters
+        ----------
+        msg: str
+            the message.
+        """
+        pass
