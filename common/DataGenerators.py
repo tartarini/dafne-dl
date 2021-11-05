@@ -15,7 +15,7 @@
 
 # Data generator classes - from directory or from memory
 #from collections import Sequence
-from keras.utils import Sequence
+from tensorflow.keras.utils import Sequence
 import numpy as np
 import os
 
