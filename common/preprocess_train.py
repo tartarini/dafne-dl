@@ -25,7 +25,7 @@ from scipy.ndimage import zoom
 import math
 from skimage.filters import threshold_otsu
 import tensorflow as tf
-from keras import backend as K
+from tensorflow.keras import backend as K
 
 
 #convert an array of masks into a single numbered mask
