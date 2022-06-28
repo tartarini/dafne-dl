@@ -15,6 +15,8 @@
 
 # -*- coding: utf-8 -*-
 
+VERSION='1.2-alpha2'
+
 from .DynamicDLModel import DynamicDLModel
 from .LocalModelProvider import LocalModelProvider
 from .RemoteModelProvider import RemoteModelProvider
