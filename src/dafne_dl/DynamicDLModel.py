@@ -79,7 +79,7 @@ def default_keras_model_to_weights_function(modelObj: DynamicDLModel):
 
 
 def default_keras_delta_function(lhs: DynamicDLModel, rhs: DynamicDLModel, threshold=None):
-    from dl.interfaces import IncompatibleModelError
+    from dafne_dl.interfaces import IncompatibleModelError
     if lhs.model_id != rhs.model_id: raise IncompatibleModelError
     lhs_weights = lhs.get_weights()
     rhs_weights = rhs.get_weights()
@@ -97,7 +97,7 @@ def default_keras_delta_function(lhs: DynamicDLModel, rhs: DynamicDLModel, thres
 
 
 def default_keras_add_weights_function(lhs: DynamicDLModel, rhs: DynamicDLModel):
-    from dl.interfaces import IncompatibleModelError
+    from dafne_dl.interfaces import IncompatibleModelError
     if lhs.model_id != rhs.model_id: raise IncompatibleModelError
     lhs_weights = lhs.get_weights()
     rhs_weights = rhs.get_weights()

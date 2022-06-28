@@ -15,3 +15,6 @@
 
 # -*- coding: utf-8 -*-
 
+from .DynamicDLModel import DynamicDLModel
+from .LocalModelProvider import LocalModelProvider
+from .RemoteModelProvider import RemoteModelProvider

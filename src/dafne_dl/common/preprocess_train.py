@@ -20,7 +20,7 @@ import os
 import skimage
 from skimage.morphology import square
 from .padorcut import padorcut
-import dl.common.biascorrection as biascorrection
+from . import biascorrection
 from scipy.ndimage import zoom
 import math
 from skimage.filters import threshold_otsu
