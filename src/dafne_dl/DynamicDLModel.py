@@ -21,6 +21,9 @@ Such top level functions should define all the imports within themselves (i.e. d
 #  along with this program.  If not, see <https://www.gnu.org/licenses/>.
 
 from __future__ import annotations
+
+import re
+
 from .interfaces import IncompatibleModelError, DeepLearningClass
 import dill
 from io import BytesIO
@@ -48,7 +51,7 @@ def fn_to_source(function):
     return function # the source cannot be retrieved, return the object itself
 
 
-def source_to_fn(source):
+def source_to_fn(source, patches: dict = {}):
     """
     Given a source, return the (first) defined function. If the source is not a string, return the object itself
     """
@@ -56,6 +59,9 @@ def source_to_fn(source):
         print("source to fn: source is not a string")
         return source
     #print("source to fn: source is string")
+    for search, replace in patches.items():
+        source = re.sub(search, replace, source)
+
     locs = {}
     globs = {}
     try:
@@ -308,11 +314,17 @@ class DynamicDLModel(DeepLearningClass):
             A new instance of a dynamic model
 
         """
-        
+
+        # code patches for on-the-fly conversion of old models to new format
+        patches = {
+            'from dl': 'from dafne_dl',
+            'import dl': 'import dafne_dl'
+        }
+
         inputDict = dill.load(file)
         for k,v in inputDict.items():
             if '_function' in k:
-                inputDict[k] = source_to_fn(v) # convert the functions from source
+                inputDict[k] = source_to_fn(v, patches) # convert the functions from source
 
         #print(inputDict)
         outputObj = DynamicDLModel(**inputDict)
