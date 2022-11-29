@@ -39,13 +39,14 @@ def upload_model(url_base, filename, model_name, api_key, dice):
     print(file_hash)
     for retries in range(UPLOAD_RETRIES):
         print(f"Sending {filename}")
-        files = {'model_binary': open(filename, 'rb')}
-        r = requests.post(url_base + "upload_model",
-                          files=files,
-                          data={"model_type": model_name,
-                                "api_key": api_key,
-                                "dice": dice,
-                                "hash": file_hash})
+        with open(filename, 'rb') as f:
+            files = {'model_binary': f}
+            r = requests.post(url_base + "upload_model",
+                              files=files,
+                              data={"model_type": model_name,
+                                    "api_key": api_key,
+                                    "dice": dice,
+                                    "hash": file_hash})
         print(f"status code: {r.status_code}")
         try:
             print(f"message: {r.json()['message']}")
@@ -63,10 +64,11 @@ def upload_model(url_base, filename, model_name, api_key, dice):
 def upload_data(url_base, filename, api_key):
     for retries in range(UPLOAD_RETRIES):
         print(f"Sending {filename}")
-        files = {'data_binary': open(filename, 'rb')}
-        r = requests.post(url_base + "upload_data",
-                          files=files,
-                          data={"api_key": api_key})
+        with open(filename, 'rb') as f:
+            files = {'data_binary': f}
+            r = requests.post(url_base + "upload_data",
+                              files=files,
+                              data={"api_key": api_key})
         print(f"status code: {r.status_code}")
         try:
             print(f"message: {r.json()['message']}")

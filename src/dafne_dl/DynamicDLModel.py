@@ -141,7 +141,7 @@ class DynamicDLModel(DeepLearningClass):
     """
     def __init__(self, model_id,  # a unique ID to avoid mixing different models
                  init_model_function,  # inits the model. Accepts no parameters and returns the model
-                 apply_model_function,  # function that applies the model. Has the object, and image, and a sequence containing resolutions as parameters
+                 apply_model_function,  # function that applies the model. Has the object, and image
                  weights_to_model_function = default_keras_weights_to_model_function,  # put model weights inside the model.
                  model_to_weights_function = default_keras_model_to_weights_function,  # get the weights from the model in a pickable format
                  calc_delta_function = default_keras_delta_function,  # calculate the weight delta
