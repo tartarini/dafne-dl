@@ -15,7 +15,7 @@
 
 # -*- coding: utf-8 -*-
 
-VERSION='1.3-alpha'
+VERSION='1.3-alpha2'
 
 from . import resources
 

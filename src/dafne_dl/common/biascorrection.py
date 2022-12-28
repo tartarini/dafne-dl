@@ -17,19 +17,23 @@
 
 import SimpleITK as sitk
 
-def biascorrection(file_or_image):
-    if type(file_or_image) == str:
-        return biascorrection_file(file_or_image)
-    else:
-        return biascorrection_image(file_or_image)
+DEFAULT_BIAS_CORRECTION_LEVELS = 8
 
-def biascorrection_image(image):
+
+def biascorrection(file_or_image, levels=DEFAULT_BIAS_CORRECTION_LEVELS):
+    if type(file_or_image) == str:
+        return biascorrection_file(file_or_image, levels)
+    else:
+        return biascorrection_image(file_or_image, levels)
+
+
+def biascorrection_image(image, levels=DEFAULT_BIAS_CORRECTION_LEVELS):
     MAX_GRAY_VALUE = 600
     if not type(image) == sitk.SimpleITK.Image:
         # normalize values
         image = image*MAX_GRAY_VALUE/image.max()
         image = sitk.GetImageFromArray(image)
-        image=sitk.Cast(image, sitk.sitkFloat32)
+        image = sitk.Cast(image, sitk.sitkFloat32)
     else:
         image = sitk.GetArrayFromImage(image)
         image = image * MAX_GRAY_VALUE / image.max()
@@ -38,13 +42,14 @@ def biascorrection_image(image):
 
     maskImage = sitk.OtsuThreshold(image, 0, 1, 200)
     corrector = sitk.N4BiasFieldCorrectionImageFilter()
-    numberFittingLevels = 4
+    numberFittingLevels = levels
     numberOfIteration = [50]
     corrector.SetMaximumNumberOfIterations(numberOfIteration * numberFittingLevels)
     output = corrector.Execute(image, maskImage)
     img2 = sitk.GetArrayFromImage(output)
     return img2
 
-def biascorrection_file(nifti_file):
+
+def biascorrection_file(nifti_file, levels=DEFAULT_BIAS_CORRECTION_LEVELS):
     inputImage = sitk.ReadImage(nifti_file,sitk.sitkFloat32) 
-    return biascorrection_image(inputImage)
+    return biascorrection_image(inputImage, levels)
